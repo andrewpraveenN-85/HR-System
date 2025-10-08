@@ -114,9 +114,6 @@ class AttendanceController extends Controller
             $attDate = $attDT->toDateString();                    
             $attTime = $attDT->format('H:i:s');                    
 
-            // Standard working-hours threshold
-            $workHoursThreshold = 8 * 3600;
-
             // Try to find a record for THIS date first
             $attendanceRecord = Attendance::where('employee_id', $employeeId)
                 ->where('date', $attDate)
@@ -141,7 +138,7 @@ class AttendanceController extends Controller
                     }
 
                     $totalWorkSeconds = $clockIn->diffInSeconds($clockOut);
-                    $overtimeSeconds  = max(0, $totalWorkSeconds - $workHoursThreshold);
+                    $overtimeSeconds  = $this->calculateOvertimeSeconds($clockIn, $clockOut, $openPrev->date);
 
                     $openPrev->update([
                         'clock_out_time'   => $attTime,         // store only time; date remains previous day
@@ -188,7 +185,7 @@ class AttendanceController extends Controller
             }
 
             $totalWorkSeconds = $clockInDT->diffInSeconds($clockOutDT);
-            $overtimeSeconds  = max(0, $totalWorkSeconds - $workHoursThreshold);
+            $overtimeSeconds  = $this->calculateOvertimeSeconds($clockInDT, $clockOutDT, $attendanceRecord->date);
 
             $attendanceRecord->update([
                 'clock_out_time'   => $attTime,
@@ -242,22 +239,18 @@ class AttendanceController extends Controller
         $lateThreshold = Carbon::parse($date . ' 08:30:00');
 
         if ($clockIn->greaterThanOrEqualTo($tenAM)) {
-            // After 10:00 AM – OT after 4 hours
+            // After 10:00 AM – count from actual clock-in
             $workStart = $clockIn->copy();
-            $otThreshold = 4 * 3600;
         } else {
             // Before 10:00 AM – Start at 8:30 AM if earlier
             $workStart = $clockIn->lessThan($eightThirty) ? $eightThirty->copy() : $clockIn->copy();
-            $otThreshold = 8 * 3600;
         }
 
         // Work time in seconds
         $totalWorkSeconds = $workStart->diffInSeconds($clockOut);
 
-        // Overtime calculation
-        $overtimeSeconds = $totalWorkSeconds > $otThreshold
-            ? $totalWorkSeconds - $otThreshold
-            : 0;
+        // Overtime calculation based on 4:30 PM cutoff
+        $overtimeSeconds = $this->calculateOvertimeSeconds($clockIn, $clockOut, $date);
 
         // Late time calculation
         $lateBySeconds = $clockIn->greaterThan($lateThreshold)
@@ -316,22 +309,18 @@ class AttendanceController extends Controller
             $lateThreshold = Carbon::parse($request->date . ' 08:30:00');
 
             if ($clockIn->greaterThanOrEqualTo($tenAM)) {
-                // Came after 10:00 AM – Work from actual clock-in, OT after 4 hours
+                // Came after 10:00 AM – work from actual clock-in
                 $workStart = $clockIn->copy();
-                $otThreshold = 4 * 3600;
             } else {
                 // Came before 10:00 AM – Work from 8:30 AM or actual clock-in (whichever is later)
                 $workStart = $clockIn->lessThan($eightThirty) ? $eightThirty->copy() : $clockIn->copy();
-                $otThreshold = 8 * 3600;
             }
 
             // Calculate total work seconds
             $totalWorkSeconds = $workStart->diffInSeconds($clockOut);
 
             // Calculate OT
-            $overtimeSeconds = $totalWorkSeconds > $otThreshold
-                ? $totalWorkSeconds - $otThreshold
-                : 0;
+            $overtimeSeconds = $this->calculateOvertimeSeconds($clockIn, $clockOut, $request->date);
 
             // Calculate Late By
             $lateBySeconds = $clockIn->greaterThan($lateThreshold)
@@ -376,6 +365,21 @@ class AttendanceController extends Controller
 
         [$hours, $minutes, $seconds] = explode(':', $time);
         return ($hours * 3600) + ($minutes * 60) + $seconds;
+    }
+
+    /**
+     * Calculate overtime seconds using the fixed 4:30 PM cutoff.
+     */
+    private function calculateOvertimeSeconds(Carbon $clockIn, Carbon $clockOut, string $referenceDate): int
+    {
+        $otStart = Carbon::parse($referenceDate . ' 16:30:00');
+        $effectiveStart = $clockIn->greaterThan($otStart) ? $clockIn->copy() : $otStart;
+
+        if ($clockOut->lessThanOrEqualTo($effectiveStart)) {
+            return 0;
+        }
+
+        return $clockOut->diffInSeconds($effectiveStart);
     }
 
     /**
