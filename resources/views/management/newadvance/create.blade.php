@@ -56,8 +56,8 @@
               id="status"
               name="status"
               class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:bg-gradient-to-r from-[#184E77] to-[#52B69A] text-xl text-black focus:border-blue-500 font-bold text-[#0000008C]">
-              <option value="approved">Approved</option>
               <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>

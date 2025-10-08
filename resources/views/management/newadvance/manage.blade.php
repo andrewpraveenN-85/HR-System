@@ -191,7 +191,7 @@
                 {{ $advance->advance_amount }}
             </td>
             <td class="text-xl text-black px-4 py-2 text-left align-middle bg-[#D9D9D966]">
-                {{ $advance->advance_date }}
+                {{ \Carbon\Carbon::parse($advance->advance_date)->format('Y-m-d') }}
             </td>
             <td class="text-xl text-[#3569C3] px-4 py-2 text-left align-middle bg-[#D9D9D966]">
                 @if (strtolower($advance->status) === 'approved')
@@ -538,7 +538,7 @@ function openEditModal(advanceId) {
     selectedFiles = new DataTransfer();
     existingFilesList = [];
 
-    fetch(`${window.location.origin}/dashboard/newadvances/${advanceId}/edit`)
+    fetch(`${window.location.origin}/dashboard/newadvance/${advancesId}/edit`)
         .then(response => response.text())
         .then(html => {
             modalContent.innerHTML = html;
