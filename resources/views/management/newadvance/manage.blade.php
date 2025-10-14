@@ -176,7 +176,7 @@
             <th class="text-xl text-black font-bold px-4 py-2 text-left align-middle">Advance Amount</th>
             <th class="text-xl text-black font-bold px-4 py-2 text-left align-middle">Advance Date</th>
             <th class="text-xl text-black font-bold px-4 py-2 text-left align-middle">Approval Status</th>
-            <!-- <th class="text-xl text-black font-bold px-4 py-2 text-left align-middle">Supporting Docs.</th> -->
+            <th class="text-xl text-black font-bold px-4 py-2 text-left align-middle">Supporting Docs.</th>
             <th class="text-xl text-black font-bold px-4 py-2 text-left align-middle">Actions</th>
         </tr>
     </thead>
