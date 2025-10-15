@@ -73,7 +73,7 @@
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+           padding: 4px 6px;
             text-align: left;
         }
         th {
@@ -155,7 +155,9 @@
                     <td class="text-right no-border">({{ number_format($record->gross_salary, 2) }})</td>
                 </tr>
                 <tr>
-                    <td class="bold-row no-upper-border">Fixed Allowances</td>
+                    <td colspan="2" class="pt-4 pb-2 font-bold text-lg text-blue-600 border-t-2 border-gray-300">
+        Fixed Allowances
+    </td>
                 </tr>
                 <tr>
                     <td>Traveling Allowances</td>
@@ -173,20 +175,24 @@
                     <td>Phone Allowance</td>
                     <td class="text-right">{{ number_format($record->phone_allowance, 2) }}</td>
                 </tr>
+                 <tr>
+                    <td>Production Bonus</td>
+                    <td class="text-right">{{ number_format($record->production_bonus, 2) }}</td>
+                </tr>
+                <tr>
+                    <td colspan="2" class="pt-4 pb-2 font-bold text-lg text-blue-600 border-t-2 border-gray-300">Variable Allowance</td>
+                </tr>
                 <tr>
                     <td>OT</td>
                     <td class="text-right">{{ number_format($record->ot_payment, 2) }}</td>
                 </tr>
-                <tr>
-                    <td>Production Bonus</td>
-                    <td class="text-right">{{ number_format($record->production_bonus, 2) }}</td>
-                </tr>
+               
                 <tr class="totals-row mt-2 underline-offset-0">
                     <td>Total Earnings</td>
                     <td class="text-right">{{ number_format($record->total_earnings, 2) }}</td>
                 </tr>
                 <tr class="bold-row no-upper-border">
-                    <td class="no-upper-border">Deductions</td>
+                    <td colspan="2" class="pt-4 pb-2 font-bold text-lg text-blue-600 border-t-2 border-gray-300">Deductions</td>
                 </tr>
                 <tr>
                     <td>EPF</td>
