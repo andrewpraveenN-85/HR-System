@@ -182,5 +182,13 @@ class Employee extends Model
         
         return 1000; // Default daily rate
     }
+    /**
+ * Relationship: Bank Details
+ */
+public function bankDetails()
+{
+    return $this->hasOne(BankDetails::class);
 }
+}
+
 
