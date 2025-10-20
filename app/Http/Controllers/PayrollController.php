@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\Employee;
 use App\Models\Payroll;
+use App\Models\Leave;
 use App\Models\Deduction;
 use App\Models\Allowance;
 use Illuminate\Http\Request;
@@ -12,12 +13,13 @@ use App\Models\SalaryDetails;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 
+
 class PayrollController extends Controller
 {
     public function create()
     {
-      //  $payrolls = Payroll::with(['allowances', 'deductions','employee'])->get(); // Load related employee data
-        return view('management.payroll.payroll-create');
+      $employees = Employee::all(); // fetch all employees
+    return view('management.payroll.payroll-create', compact('employees'));
     }
 
     public function store(Request $request)
@@ -242,5 +244,51 @@ public function destroy($id)
     return redirect()->route('dashboard.payroll')->with('success', 'Payroll record deleted successfully!');
 }
 
+public function getSalaryDetails($id)
+{
+    // Get the employee
+    $employee = Employee::find($id);
+
+    // Get the salary details
+    $salaryDetails = SalaryDetails::where('employee_id', $id)->first();
+
+
+    if (!$employee || !$salaryDetails) {
+        return response()->json(['error' => 'No data found'], 404);
+    }
+
+    // Return all required data as JSON
+    return response()->json([
+        'employee_name' => $employee->full_name,
+        'gross_salary' => $salaryDetails->gross_salary,
+        'transport_allowance' => $salaryDetails->transport_allowance,
+        'attendance_allowance' => $salaryDetails->attendance_allowance,
+        'phone_allowance' => $salaryDetails->phone_allowance,
+        'car_allowance' => $salaryDetails->car_allowance,
+        'basic' => $salaryDetails->basic,
+        'budget_allowance' => $salaryDetails->budget_allowance,
+        'production_bonus' => $salaryDetails->production_bonus,
+        'ot_payment' => $salaryDetails->ot_payment,
+        'advance_payment' => $salaryDetails->advance_payment,
+        'loan_payment' => $salaryDetails->loan_payment,
+    ]);
+}
+public function getNoPayLeave($id,$month)
+{
+    $startDate = date('Y-m-05', strtotime($month));
+    $endDate = date('Y-m-05', strtotime('+1 month', strtotime($month)));
+    
+    // Calculate leave-based no-pay deductions
+    $leaveNoPayAmount = Leave::where('employee_id', $id)
+        ->where('is_no_pay', true)
+        ->whereBetween('start_date', [$startDate, $endDate])
+        ->sum('no_pay_amount');
+
+    return response()->json([
+        'no_pay_amount' => $leaveNoPayAmount
+
+    ]);
+
+}
 }
 

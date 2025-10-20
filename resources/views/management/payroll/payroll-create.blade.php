@@ -1,3 +1,5 @@
+
+
 @extends('layouts.dashboard-layout')
 
 @section('title', 'Add Payroll')
@@ -46,48 +48,70 @@
 
         <div class="w-full flex flex-col justify-center items-center space-y-4">
             <!-- Employee Details -->
-            <div class="w-full mx-auto p-6 bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
-                <div class="w-full flex justify-start items-center pl-16">
-                    <p class="text-3xl font-bold text-black">Employee Details :</p>
+            <div class="w-full mx-auto  bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
+                <div class="w-full flex justify-start items-center ">
+                    <p class="text-3xl font-bold text-black pl-16">Employee Details :</p>
                 </div>
-                <div class="w-full flex space-x-48 px-16">
-                    <div class="w-full">
-                        <label for="employee_id" class="block text-xl text-black font-bold">Employee ID :</label>
-                        <input type="text" id="employee_id" name="employee_id" placeholder="Enter Employee ID" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
-                    </div>
+                <div class="w-full  flex justify-between items-center space-x-48 px-16">
+                  <div class="w-full">
+    <label for="employee_id" class="block text-xl text-black font-bold">Employee ID :</label>
+    <select id="employee_id" name="employee_id"
+        class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl combobox">
+        <option value="">Select or type Employee ID</option>
+        @foreach($employees as $employee)
+            <option value="{{ $employee->id }}">{{ $employee->employee_id }} </option>
+        @endforeach
+    </select>
+</div>
+
+
                     <div class="w-full">
                         <label for="employee_name" class="block text-xl text-black font-bold">Employee Name :</label>
                         <input type="text" id="employee_name" name="employee_name" placeholder="Enter Employee Name" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
                     </div>
+                    <div class="w-full">
+                       <span class="block text-xl text-black font-bold">Select a Month</span>
+                {{-- <p id="selectedMonth" class="text-lg font-bold">03.2021</p> --}}
+                <!-- Add this in your HTML, possibly near your existing month-related elements -->
+
+
+                <input
+                    type="month"
+                    id="monthSelector"
+                    class="w-full px-4 py-2 border-2 border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#184E77] focus:border-[#184E77]"
+                >
                 </div>
-                <div class="w-full flex space-x-48 px-16">
-                    <div class="w-full">
+              
+                
+                    <!-- <div >
                         <label for="known_name" class="block text-xl text-black font-bold">Known Name :</label>
-                        <input type="text" id="known_name" name="known_name" placeholder="Enter Known Name" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
+                        <input type="text" id="known_name" name="known_name" placeholder="Enter known Name" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
                     </div>
-                    <div class="w-full">
+                      </div> -->
+                    <!--<div class="w-full">
                         <label for="epf_no" class="block text-xl text-black font-bold">EPF No :</label>
                         <input type="text" id="epf_no" name="epf_no" placeholder="Enter EPF No" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
-                    </div>
-                </div>
+                    </div> -->
+                
+</div>
             </div>
+            <div class="w-full flex justify-between items-start space-x-8 mt-8">
 
             <!-- Salary and Allowances Section -->
-            <div class="w-full mx-auto bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
+            <div class="w-1/2 bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
                 <div class="w-full flex justify-start items-center">
-                    <p class="text-3xl font-bold text-black pl-16">Salary and Allowances :</p>
+                    <p class="text-3xl font-bold text-black pl-4">Salary and Allowances :</p>
                 </div>
-                <div class="w-full flex justify-between items-center space-x-48 px-16">
-                    <div class="w-1/2 flex flex-col space-y-4">
-                        <div >
+              <div class="flex flex-col space-y-4 px-4">
+                      <!-- <div >
                             <label for="pay_date" class="block text-xl text-black font-bold">Pay Date :</label>
                             <input type="date" id="pay_date" name="pay_date" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
                         </div>
                         <div>
                             <label for="payed_month" class="block text-xl text-black font-bold">Paid Month :</label>
                             <input type="month" id="payed_month" name="payed_month" placeholder="Enter Paid Month" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
-                        </div>
-                        <div>
+                        </div> -->
+                       <div>
                             <label for="basic" class="block text-xl text-black font-bold">Basic Salary :</label>
                             <input type="number" id="basic" name="basic" placeholder="Enter Basic Salary" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateGrossSalary()" />
                         </div>
@@ -95,12 +119,6 @@
                             <label for="budget_allowance" class="block text-xl text-black font-bold">Budget Allowance :</label>
                             <input type="number" id="budget_allowance" name="budget_allowance" placeholder="Enter Budget Allowance" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateGrossSalary()" />
                         </div>
-                        <div>
-                            <label for="gross_salary" class="block text-xl text-black font-bold">Gross Salary :</label>
-                            <input type="number" id="gross_salary" name="gross_salary" readonly class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
-                        </div>
-                    </div>
-                    <div class="w-1/2 flex flex-col space-y-4">
                         <div>
                             <label for="transport_allowance" class="block text-xl text-black font-bold">Transport Allowance :</label>
                             <input type="number" id="transport_allowance" name="transport_allowance" placeholder="Enter Transport Allowance" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalEarnings()"/>
@@ -122,23 +140,37 @@
                             <label for="production_bonus" class="block text-xl text-black font-bold">Production Bonus :</label>
                             <input type="number" id="production_bonus" name="production_bonus" placeholder="Enter production bonus" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalEarnings()"/>
                         </div>
+                        <div>
+                            <label for="ot_payment" class="block text-xl text-black font-bold">OT Payment:</label>
+                            <input type="number" id="ot_payment" name="ot_payment" placeholder="Enter OT Payment" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalEarnings()"/>
+                        </div>
 
 
+                        <div>
+                           <label for="gross_salary" class="block text-xl text-black font-bold">Gross Salary :</label>
+                           <input type="number" id="gross_salary" name="gross_salary" readonly class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
+                       </div>
+                       
                     </div>
-                </div>
+                    
+                      
+
+
+                    
+              
             </div>
+               <div class="w-1/2 flex flex-col space-y-8">
 
             <!-- Deductions Section -->
-            <div class="w-full mx-auto bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
+            <div class="bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
                 <div class="w-full flex justify-start items-center">
-                    <p class="text-3xl font-bold text-black pl-16">Deductions :</p>
+                    <p class="text-3xl font-bold text-black pl-4">Deductions :</p>
                 </div>
-                <div class="w-full flex justify-between items-center space-x-48 px-16">
-                    <div class="w-1/2 flex flex-col space-y-4">
-                        <div >
+                 <div class="flex flex-col space-y-4 px-4">
+                       <!-- <div >
                             <label for="stamp_duty" class="block text-xl text-black font-bold">Stamp Duty :</label>
                             <input type="number" id="stamp_duty" name="stamp_duty" oninput="calculateTotalDeductions()" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
-                        </div>
+                        </div>-->
                         <div >
                             <label for="no_pay" class="block text-xl text-black font-bold">No Pay :</label>
                             <input type="number" id="no_pay" name="no_pay" oninput="calculateTotalDeductions()" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
@@ -156,7 +188,16 @@
                             <input type="number" id="loan_payment" name="loan_payment" placeholder="Enter Loan Payment" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalDeductions()" />
                         </div>
                     </div>
-                    <div class="w-1/2 flex flex-col space-y-4">
+                </div>     
+                   <div>
+                      <!-- ✅ New Box: Total Section (below deductions) -->
+                    <div class="bg-[#D9D9D966] rounded-3xl p-8 space-y-4">
+                        <div class="w-full flex justify-start items-center">
+                            <p class="text-3xl font-bold text-black pl-4">Salary Summary :</p>
+                        </div>
+
+             <div class="flex flex-col space-y-4 px-4">
+                     <div >
                         <div>
                             <label for="total_deductions" class="block text-xl text-black font-bold">Total Deductions :</label>
                             <input type="number" id="total_deductions" name="total_deductions" readonly class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
@@ -171,9 +212,13 @@
                             <input type="number" id="net_salary" name="net_salary" readonly class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
                         </div>
                     </div>
+                   </div>
                 </div>
-            </div>
+                
+            
+            
         </div>
+</div>
     </div>
 </form>
 
@@ -192,13 +237,14 @@
     }
 
     function calculateTotalDeductions() {
+        console.log("Calculating deductions...");
         const epf = parseFloat(document.getElementById('epf_8_percent').value) || 0;
         const advancePayment = parseFloat(document.getElementById('advance_payment').value) || 0;
         const loanPayment = parseFloat(document.getElementById('loan_payment').value) || 0;
-        const stampDuty = parseFloat(document.getElementById('stamp_duty').value) || 0;
+        // const stampDuty = parseFloat(document.getElementById('stamp_duty').value) || 0;
         const noPay = parseFloat(document.getElementById('no_pay').value) || 0;
 
-        const totalDeductions = epf + advancePayment + loanPayment +stampDuty +(noPay*1000);
+        const totalDeductions = epf + advancePayment + loanPayment +noPay;
 
         
 
@@ -237,5 +283,72 @@
         const totalEarnings = grossSalary + transportAllowance + attendanceAllowance + phoneAllowance + carAllowance + prodBonus  - deductions;
         document.getElementById('net_salary').value = totalEarnings.toFixed(2);
     }
+$('#employee_id').on('change', function () {
+    let employeeId = $(this).val();
+
+    if (employeeId) {
+        $.ajax({
+            url: `/employees/${employeeId}/salary-details`,
+            type: 'GET',
+            success: function (data) {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Fill the fields
+                $('#employee_name').val(data.employee_name);
+                $('#gross_salary').val(data.gross_salary);
+                $('#transport_allowance').val(data.transport_allowance);
+                $('#attendance_allowance').val(data.attendance_allowance);
+                $('#phone_allowance').val(data.phone_allowance);
+                $('#car_allowance').val(data.car_allowance);
+                $('#basic').val(data.basic);
+                $('#budget_allowance').val(data.budget_allowance);
+                $('#production_bonus').val(data.production_bonus);
+                $('#ot_payment').val(data.ot_payment);
+                $('#advance_payment').val(data.advance_payment);
+                $('#loan_payment').val(data.loan_payment);
+                calculateGrossSalary();
+            },
+            error: function () {
+                alert('Failed to fetch employee salary details.');
+            }
+        });
+    }
+});
+
+$('#monthSelector').on('change', function () {
+    let month = $(this).val(); // Get the selected month
+    let id = $('#employee_id').val(); // Get employee ID
+
+    if (month && id) {
+        $.ajax({
+            url: `/employees/${id}/no-pay/${month}`,
+            type: 'GET',
+            success: function (data) {
+
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Fill the no pay field
+                $('#no_pay').val(data.no_pay_amount);
+                calculateGrossSalary();
+            },
+            error: function (xhr, status, error) {
+                alert('Failed to fetch no pay details.');
+            }
+        });
+    } else {
+        console.warn("⚠️ Month or Employee ID not selected");
+    }
+});
+
+
+
+
 </script>
 @endsection
+
