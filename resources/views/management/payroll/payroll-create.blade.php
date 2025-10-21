@@ -14,6 +14,23 @@
     </ul>
 </div>
 @endif
+
+@if (session('success'))
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            alert("{{ session('success') }}");
+        });
+    </script>
+@endif
+
+@if (session('error'))
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            alert("{{ session('error') }}");
+        });
+    </script>
+@endif
+
 <form method="POST" action="{{ route('payroll.store') }}" class="p-0 m-0">
     @csrf
     <div class="flex flex-col items-start justify-start w-full px-4">
@@ -70,14 +87,15 @@
                         <input type="text" id="employee_name" name="employee_name" placeholder="Enter Employee Name" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
                     </div>
                     <div class="w-full">
-                       <span class="block text-xl text-black font-bold">Select a Month</span>
+                       <span for="payed_month" class="block text-xl text-black font-bold">Select a Month</span>
                 {{-- <p id="selectedMonth" class="text-lg font-bold">03.2021</p> --}}
                 <!-- Add this in your HTML, possibly near your existing month-related elements -->
 
 
                 <input
                     type="month"
-                    id="monthSelector"
+                    id="payed_month"
+                    name="payed_month"
                     class="w-full px-4 py-2 border-2 border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#184E77] focus:border-[#184E77]"
                 >
                 </div>
@@ -140,10 +158,10 @@
                             <label for="production_bonus" class="block text-xl text-black font-bold">Production Bonus :</label>
                             <input type="number" id="production_bonus" name="production_bonus" placeholder="Enter production bonus" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalEarnings()"/>
                         </div>
-                        <div>
+                        <!-- <div>
                             <label for="ot_payment" class="block text-xl text-black font-bold">OT Payment:</label>
                             <input type="number" id="ot_payment" name="ot_payment" placeholder="Enter OT Payment" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalEarnings()"/>
-                        </div>
+                        </div> -->
 
 
                         <div>
@@ -167,10 +185,10 @@
                     <p class="text-3xl font-bold text-black pl-4">Deductions :</p>
                 </div>
                  <div class="flex flex-col space-y-4 px-4">
-                       <!-- <div >
+                       <div >
                             <label for="stamp_duty" class="block text-xl text-black font-bold">Stamp Duty :</label>
                             <input type="number" id="stamp_duty" name="stamp_duty" oninput="calculateTotalDeductions()" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
-                        </div>-->
+                        </div>
                         <div >
                             <label for="no_pay" class="block text-xl text-black font-bold">No Pay :</label>
                             <input type="number" id="no_pay" name="no_pay" oninput="calculateTotalDeductions()" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
