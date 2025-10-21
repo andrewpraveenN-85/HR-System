@@ -26,11 +26,11 @@ class PayrollController extends Controller
     {
         // Validate the input data
         $validator = Validator::make($request->all(), [
-           'employee_id' => 'required|exists:employees,employee_id',
-            'employee_name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'employee_id' => 'required|exists:employees,id',
+            'employee_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\.]+$/',
             'known_name' => 'nullable|string|max:255',
             'epf_no' => 'nullable|integer|unique:employee_salary_details,epf_no',
-            'pay_date' => 'required|date',
+            'pay_date' => 'nullable|date',
             'payed_month' => 'required|string|max:255',
             'basic' => 'required|numeric|min:0',
             'budget_allowance' => 'nullable|numeric|min:0',
@@ -44,6 +44,11 @@ class PayrollController extends Controller
             'stamp_duty' => 'nullable|numeric|min:0',
             'no_pay' => 'nullable|numeric|min:0',
             'advance_payment' => 'nullable|numeric|min:0',
+            'ot_payment' => 'nullable|numeric',
+            'epf_8_percent' => 'nullable|numeric',
+            'total_deductions' => 'nullable|numeric',
+            'total_earnings' => 'nullable|numeric',
+            'net_salary' => 'nullable|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -54,11 +59,12 @@ class PayrollController extends Controller
             // Calculate deductions and net salary
             $grossSalary = $request->gross_salary;
             $noPayDeductions = ($request->no_pay ?? 0) * 1000;
+            $stampDuty = ($request->stamp_duty ?? 0) + 25;
             $totalDeductions = (
                 ($request->epf_8_percent ?? 0) +
                 ($request->advance_payment ?? 0) +
                 ($request->loan_payment ?? 0) +
-                ($request->stamp_duty ?? 0) +
+                $stampDuty +
                 $noPayDeductions
             );
 
@@ -94,7 +100,7 @@ class PayrollController extends Controller
                 'production_bonus' => $request->production_bonus,
                 'car_allowance' => $request->car_allowance,
                 'loan_payment' => $request->loan_payment,
-                'stamp_duty' => $request->stamp_duty,
+                'stamp_duty' => $stampDuty,
                 'no_pay' => $request->no_pay,
                 'advance_payment' => $request->advance_payment,
                 'total_deductions' => $totalDeductions,
@@ -234,7 +240,7 @@ class PayrollController extends Controller
         $pdf = PDF::loadView('payroll.all-paysheets', compact('records'));
 
         return $pdf->download('All-Paysheets-' . $month . '.pdf');
-    }
+    } 
 
 public function destroy($id)
 {

@@ -101,17 +101,17 @@
         </div>  
     </div>
 
-    <div class="w-1/2 flex flex-col justify-start items-start nunito- rounded-3xl">
+    <!--<div class="w-1/2 flex flex-col justify-start items-start nunito- rounded-3xl">
     <div class="w-full flex justify-between items-center bg-[#D9D9D980] px-4 pt-4 rounded-t-xl">
             <p class="text-3xl font-bold text-black">Legal Documents</p>
             <label for="doc-files" class="flex items-center justify-center px-4 py-2 bg-[#184E77] border-2 border-[#52B69A80] text-white rounded-md cursor-pointer hover:bg-blue-600 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"> 
                 <span class="iconify" data-icon="ic:sharp-upload" style="width: 16px; height: 16px;"></span>
                 <span class="ml-2">Upload Files</span>
             </label>
-            <!-- Visible File Input -->
+            Visible File Input 
             <input type="file" id="doc-files" accept="application/pdf" class="hidden" multiple />
 
-            <!-- Hidden File Input -->
+              Hidden File Input 
             <input type="file" name="legal_documents[]" id="hidden-files" class="hidden" multiple />
             <input type="hidden" id="existing-files-data" value='{{ $employee->legal_documents }}'>
             <input type="hidden" name="existing_files" id="existing-files">
@@ -127,12 +127,12 @@
 </div>
         </div>
         
-    </div>
+    </div>-->
 </div>   
 
 
 
-        <!-- Employment Information --> 
+        <!-- Employment Information 
     <div class="w-full flex space-x-16 pt-8">
     <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl cursor-pointer nunito focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
         <div class="w-full flex pl-8">
@@ -208,7 +208,7 @@
                 </div>
             </div>
     </div>
-    </div>
+    </div>--> 
 
         <!-- Personal Information --> 
         <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
@@ -279,7 +279,8 @@
 </div>
 </div>
 
-        <!-- Education and Experience --> 
+<!--
+        Education and Experience
         <div class="w-full flex space-x-16 pb-8 pt-8">
     <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
     <div class="w-full flex pl-8">
@@ -323,7 +324,7 @@
     </div> 
     </div>
 
-        <!-- Training and Certification --> 
+        Training and Certification  
         <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 mt-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
     <div class="w-full flex pl-8">
         <p class="text-3xl font-bold text-black">Training and Certification</p>
@@ -369,7 +370,7 @@
     </div>
 </div>
 
-</div>
+</div>-->
  <!-- Bank Details -->
  <div class="w-full flex space-x-16 pb-8 pt-8">
     <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">

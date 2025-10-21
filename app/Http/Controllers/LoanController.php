@@ -11,7 +11,8 @@ class LoanController extends Controller
 {
     public function create()
     {
-        return view('management.advance.advance-create'); 
+        $employees = Employee::all(); // Get all employees
+    return view('management.advance.advance-create', compact('employees'));
     }
 
     public function store(Request $request)
