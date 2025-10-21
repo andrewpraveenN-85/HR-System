@@ -106,17 +106,6 @@
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required />
                     </div>
 
-                    <div>
-                        <label for="basic" class="text-xl">Basic Salary</label>
-                        <input type="number" id="basic" name="basic" placeholder="Enter Basic Salary"
-                            class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                    </div>
-
-                    <div>
-                        <label for="budget_allowance" class="text-xl">Budget Allowance</label>
-                        <input type="number" id="budget_allowance" name="budget_allowance" placeholder="Enter Budget Allowance"
-                            class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
-                    </div>
                 </div>
             </div>
         </div>
@@ -129,13 +118,13 @@
                 <div class="flex flex-col space-y-4 text-black font-bold">
                     <div>
                         <label for="account_holder_name" class="text-xl">Account Holder Name</label>
-                        <input type="text" id="account_holder_name" name="account_holder_name" placeholder="Enter Account Holder Name"
+                        <input type="text" id="account_holder_name" name="account_holder_name" placeholder="Enter Account Holder Name" value="{{ old('account_holder_name') }}" required
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                     </div>
 
                     <div>
                         <label for="bank_name" class="text-xl">Bank Name</label>
-                        <input type="text" id="bank_name" name="bank_name" placeholder="Enter Bank Name"
+                        <input type="text" id="bank_name" name="bank_name" placeholder="Enter Bank Name" value="{{ old('bank_name') }}" required
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                     </div>
 
@@ -147,7 +136,7 @@
 
                     <div>
                         <label for="account_no" class="text-xl">Account No</label>
-                        <input type="text" id="account_number" name="account_number" placeholder="Enter Account No"
+                        <input type="text" id="account_number" name="account_number" placeholder="Enter Account No" value="{{ old('account_number') }}" required
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                     </div>
 
@@ -163,6 +152,59 @@
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Salary Details -->
+    <div class="w-full bg-[#D9D9D980] p-8 rounded-3xl mt-14">
+        <h2 class="text-3xl font-bold mb-6 text-center text-[#1C1B1F]">Salary Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-black font-bold">
+            <div class="flex flex-col space-y-2">
+                <label for="epf_no" class="text-xl">EPF Number</label>
+                <input type="text" id="epf_no" name="epf_no" placeholder="Enter EPF Number" value="{{ old('epf_no') }}"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="basic" class="text-xl">Basic Salary</label>
+                <input type="number" id="basic" name="basic" placeholder="Enter Basic Salary" value="{{ old('basic') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="budget_allowance" class="text-xl">Budget Allowance</label>
+                <input type="number" id="budget_allowance" name="budget_allowance" placeholder="Enter Budget Allowance" value="{{ old('budget_allowance') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="transport_allowance" class="text-xl">Transport Allowance</label>
+                <input type="number" id="transport_allowance" name="transport_allowance" placeholder="Enter Transport Allowance" value="{{ old('transport_allowance') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="attendance_allowance" class="text-xl">Attendance Allowance</label>
+                <input type="number" id="attendance_allowance" name="attendance_allowance" placeholder="Enter Attendance Allowance" value="{{ old('attendance_allowance') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="phone_allowance" class="text-xl">Phone Allowance</label>
+                <input type="number" id="phone_allowance" name="phone_allowance" placeholder="Enter Phone Allowance" value="{{ old('phone_allowance') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="car_allowance" class="text-xl">Car Allowance</label>
+                <input type="number" id="car_allowance" name="car_allowance" placeholder="Enter Car Allowance" value="{{ old('car_allowance') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="production_bonus" class="text-xl">Production Bonus</label>
+                <input type="number" id="production_bonus" name="production_bonus" placeholder="Enter Production Bonus" value="{{ old('production_bonus') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="stamp_duty" class="text-xl">Stamp Duty</label>
+                <input type="number" id="stamp_duty" name="stamp_duty" placeholder="Enter Stamp Duty" value="{{ old('stamp_duty', '25.00') }}" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <span class="text-sm font-normal text-[#00000080]">Default value is 25.00. Adjust if needed.</span>
             </div>
         </div>
     </div>

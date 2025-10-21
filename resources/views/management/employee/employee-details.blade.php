@@ -300,6 +300,70 @@
     </div>
 </div>
 
+<div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer mt-4">
+    <div class="w-full flex pl-8">
+        <p class="text-3xl font-bold text-black">Salary Details</p>
+    </div>
+
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 pl-8 pr-8 text-black">
+        <div class="flex items-center space-x-4">
+            <i class="ri-file-list-3-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">EPF Number:</span>
+            <span class="text-xl">{{ $employee->epf_no ?? 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-money-dollar-circle-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Basic Salary:</span>
+            <span class="text-xl">{{ $employee->basic ? number_format($employee->basic, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-wallet-3-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Budget Allowance:</span>
+            <span class="text-xl">{{ $employee->budget_allowance ? number_format($employee->budget_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-bus-2-fill text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Transport Allowance:</span>
+            <span class="text-xl">{{ $employee->transport_allowance ? number_format($employee->transport_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-award-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Attendance Allowance:</span>
+            <span class="text-xl">{{ $employee->attendance_allowance ? number_format($employee->attendance_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-smartphone-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Phone Allowance:</span>
+            <span class="text-xl">{{ $employee->phone_allowance ? number_format($employee->phone_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-car-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Car Allowance:</span>
+            <span class="text-xl">{{ $employee->car_allowance ? number_format($employee->car_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-funds-box-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Production Bonus:</span>
+            <span class="text-xl">{{ $employee->production_bonus ? number_format($employee->production_bonus, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-stamp-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Stamp Duty:</span>
+            <span class="text-xl">{{ $employee->stamp_duty ? number_format($employee->stamp_duty, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-bar-chart-2-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Gross (Basic + Budget):</span>
+            <span class="text-xl">
+                @php
+                    $gross = ($employee->basic ?? 0) + ($employee->budget_allowance ?? 0);
+                @endphp
+                {{ $gross > 0 ? number_format($gross, 2) : 'N/A' }}
+            </span>
+        </div>
+    </div>
+</div>
+
 
 
 </div>

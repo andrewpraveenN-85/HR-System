@@ -373,6 +373,62 @@
 </div>-->
  <!-- Bank Details -->
  <div class="w-full flex space-x-16 pb-8 pt-8">
+    <div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
+        <div class="w-full flex pl-8">
+            <p class="text-3xl font-bold text-black">Salary Details</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-black font-bold">
+            <div class="flex flex-col space-y-2">
+                <label for="epf_no" class="text-xl">EPF Number</label>
+                <input type="text" id="epf_no" name="epf_no" value="{{ old('epf_no', $employee->epf_no) }}" placeholder="Enter EPF Number" required
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="basic" class="text-xl">Basic Salary</label>
+                <input type="number" id="basic" name="basic" value="{{ old('basic', $employee->basic) }}" placeholder="Enter Basic Salary" min="0" step="0.01" required
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="budget_allowance" class="text-xl">Budget Allowance</label>
+                <input type="number" id="budget_allowance" name="budget_allowance" value="{{ old('budget_allowance', $employee->budget_allowance) }}" placeholder="Enter Budget Allowance" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="transport_allowance" class="text-xl">Transport Allowance</label>
+                <input type="number" id="transport_allowance" name="transport_allowance" value="{{ old('transport_allowance', $employee->transport_allowance) }}" placeholder="Enter Transport Allowance" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="attendance_allowance" class="text-xl">Attendance Allowance</label>
+                <input type="number" id="attendance_allowance" name="attendance_allowance" value="{{ old('attendance_allowance', $employee->attendance_allowance) }}" placeholder="Enter Attendance Allowance" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="phone_allowance" class="text-xl">Phone Allowance</label>
+                <input type="number" id="phone_allowance" name="phone_allowance" value="{{ old('phone_allowance', $employee->phone_allowance) }}" placeholder="Enter Phone Allowance" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="car_allowance" class="text-xl">Car Allowance</label>
+                <input type="number" id="car_allowance" name="car_allowance" value="{{ old('car_allowance', $employee->car_allowance) }}" placeholder="Enter Car Allowance" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="production_bonus" class="text-xl">Production Bonus</label>
+                <input type="number" id="production_bonus" name="production_bonus" value="{{ old('production_bonus', $employee->production_bonus) }}" placeholder="Enter Production Bonus" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+            </div>
+            <div class="flex flex-col space-y-2">
+                <label for="stamp_duty" class="text-xl">Stamp Duty</label>
+                <input type="number" id="stamp_duty" name="stamp_duty" value="{{ old('stamp_duty', $employee->stamp_duty ?? 25.00) }}" placeholder="Enter Stamp Duty" min="0" step="0.01"
+                    class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <span class="text-sm font-normal text-[#00000080]">Default value is 25.00. Adjust if needed.</span>
+            </div>
+        </div>
+    </div>
+</div>
+ <!-- Bank Details -->
+ <div class="w-full flex space-x-16 pb-8 pt-8">
     <div tabindex="0" class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
     <div class="w-full flex pl-8">
         <p class="text-3xl font-bold text-black">Bank Details</p>
@@ -398,16 +454,16 @@
         </div>
         <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
             <div class="w-full">
-                <input type="text" id="account_holder_name" name="account_holder_name" value="{{ $employee->account_holder_name ?? '' }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <input type="text" id="account_holder_name" name="account_holder_name" value="{{ old('account_holder_name', $employee->account_holder_name ?? '') }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
             </div>
             <div class="w-full">
-                <input type="text" id="bank_name" name="bank_name" value="{{ $employee->bank_name ?? ''  }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <input type="text" id="bank_name" name="bank_name" value="{{ old('bank_name', $employee->bank_name ?? '')  }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
             </div>
             <div class="w-full">
-                <input type="text" id="account_no" name="account_no" value="{{ $employee->account_no ?? ''  }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <input type="text" id="account_number" name="account_number" value="{{ old('account_number', $employee->account_no ?? '') }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
             </div>
             <div class="w-full flex flex-col space-y-2">
-                <input type="text" id="branch_name" name="branch_name" value="{{ $employee->branch_name ?? ''  }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
+                <input type="text" id="branch_name" name="branch_name" value="{{ old('branch_name', $employee->branch_name ?? '')  }}" class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
             </div>
         </div>
     </div> 

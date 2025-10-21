@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="./assetes/css/root.css">
+  <link rel="stylesheet" href="{{ asset('css/root.css') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <script src="https://unpkg.com/alpinejs" defer></script>
 
