@@ -250,35 +250,39 @@ public function destroy($id)
     return redirect()->route('dashboard.payroll')->with('success', 'Payroll record deleted successfully!');
 }
 
-public function getSalaryDetails($id)
-{
-    // Get the employee
-    $employee = Employee::find($id);
+    public function getSalaryDetails($id)
+    {
+        $employeeRecord = Employee::find($id);
 
-    // Get the salary details
-    $salaryDetails = SalaryDetails::where('employee_id', $id)->first();
+        if ($employeeRecord === null) {
+            return response()->json(['error' => 'No data found'], 404);
+        }
 
+        $latestSalary = SalaryDetails::where('employee_id', $id)
+            ->orderByDesc('pay_date')
+            ->orderByDesc('created_at')
+            ->first();
 
-    if (!$employee || !$salaryDetails) {
-        return response()->json(['error' => 'No data found'], 404);
+        $basic = (float) ($employeeRecord->basic ?? 0);
+        $budgetAllowance = (float) ($employeeRecord->budget_allowance ?? 0);
+
+        return response()->json([
+            'employee_name' => $employeeRecord->full_name,
+            'gross_salary' => round($basic + $budgetAllowance, 2),
+            'transport_allowance' => (float) ($employeeRecord->transport_allowance ?? 0),
+            'attendance_allowance' => (float) ($employeeRecord->attendance_allowance ?? 0),
+            'phone_allowance' => (float) ($employeeRecord->phone_allowance ?? 0),
+            'car_allowance' => (float) ($employeeRecord->car_allowance ?? 0),
+            'production_bonus' => (float) ($employeeRecord->production_bonus ?? 0),
+            'basic' => $basic,
+            'budget_allowance' => $budgetAllowance,
+            'stamp_duty' => (float) ($employeeRecord->stamp_duty ?? 25.00),
+            'epf_no' => $employeeRecord->epf_no,
+            'advance_payment' => (float) ($latestSalary->advance_payment ?? 0),
+            'loan_payment' => (float) ($latestSalary->loan_payment ?? 0),
+            'ot_payment' => (float) ($latestSalary->ot_payment ?? 0),
+        ]);
     }
-
-    // Return all required data as JSON
-    return response()->json([
-        'employee_name' => $employee->full_name,
-        'gross_salary' => $salaryDetails->gross_salary,
-        'transport_allowance' => $salaryDetails->transport_allowance,
-        'attendance_allowance' => $salaryDetails->attendance_allowance,
-        'phone_allowance' => $salaryDetails->phone_allowance,
-        'car_allowance' => $salaryDetails->car_allowance,
-        'basic' => $salaryDetails->basic,
-        'budget_allowance' => $salaryDetails->budget_allowance,
-        'production_bonus' => $salaryDetails->production_bonus,
-        'ot_payment' => $salaryDetails->ot_payment,
-        'advance_payment' => $salaryDetails->advance_payment,
-        'loan_payment' => $salaryDetails->loan_payment,
-    ]);
-}
 public function getNoPayLeave($id,$month)
 {
     $startDate = date('Y-m-05', strtotime($month));
