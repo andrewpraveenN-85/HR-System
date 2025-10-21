@@ -130,7 +130,7 @@
                 <p><strong>EPF No:</strong> #{{ $record->epf_no}}</p>
                 <p><strong>Designation:</strong> {{ $record->employee->title }}</p>
                 <p><strong>Joined Date:</strong> {{ $record->employee->employment_start_date }}</p>
-                <p><strong>Pay Slip for the Period of:</strong> {{ $record->payed_month }}</p>
+                <p><strong>Pay Slip for the Period of:</strong> {{ \Carbon\Carbon::createFromFormat('Y-m', $record->payed_month)->format('Y F') }}</p>
             </div>
         </div>
 
@@ -228,5 +228,15 @@
             <p>This is a computer-generated payslip. If you have any queries, contact HR.</p>
         </div>
     </div>
+    <script>
+        // Safely embed the PHP variable into JavaScript
+        const record = JSON.parse(`{!! addslashes(json_encode($record)) !!}`);
+
+        console.log('Record Data:', record);
+        console.log('Employee Data:', record.employee);
+    </script>
+
+
+
 </body>
 </html>

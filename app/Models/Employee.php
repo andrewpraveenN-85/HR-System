@@ -189,6 +189,12 @@ public function bankDetails()
 {
     return $this->hasOne(BankDetails::class);
 }
+
+public function salaryDetails()
+{
+    return $this->hasOne(SalaryDetails::class, 'employee_id');
+}
+
 }
 
 
