@@ -23,69 +23,85 @@ class PayrollController extends Controller
     }
 
     public function store(Request $request)
-    {
-        // Validate the input data
-        $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:employees,id',
-            'employee_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\.]+$/',
-            'known_name' => 'nullable|string|max:255',
-            'epf_no' => 'nullable|integer|unique:employee_salary_details,epf_no',
-            'pay_date' => 'nullable|date',
-            'payed_month' => 'required|string|max:255',
-            'basic' => 'required|numeric|min:0',
-            'budget_allowance' => 'nullable|numeric|min:0',
-            'gross_salary' => 'required|numeric|min:0',
-            'transport_allowance' => 'nullable|numeric|min:0',
-            'attendance_allowance' => 'nullable|numeric|min:0',
-            'phone_allowance' => 'nullable|numeric|min:0',
-            'production_bonus' => 'nullable|numeric|min:0',
-            'car_allowance' => 'nullable|numeric|min:0',
-            'loan_payment' => 'nullable|numeric|min:0',
-            'stamp_duty' => 'nullable|numeric|min:0',
-            'no_pay' => 'nullable|numeric|min:0',
-            'advance_payment' => 'nullable|numeric|min:0',
-            'ot_payment' => 'nullable|numeric',
-            'epf_8_percent' => 'nullable|numeric',
-            'total_deductions' => 'nullable|numeric',
-            'total_earnings' => 'nullable|numeric',
-            'net_salary' => 'nullable|numeric',
-        ]);
+{
+    // Validate the input data
+    $validator = Validator::make($request->all(), [
+        'employee_id' => 'required|exists:employees,id',
+        'employee_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\.]+$/',
+        'known_name' => 'nullable|string|max:255',
+        'epf_no' => 'nullable|integer|unique:employee_salary_details,epf_no',
+        'pay_date' => 'nullable|date',
+        'payed_month' => 'required|string|max:255',
+        'basic' => 'required|numeric|min:0',
+        'budget_allowance' => 'nullable|numeric|min:0',
+        'gross_salary' => 'required|numeric|min:0',
+        'transport_allowance' => 'nullable|numeric|min:0',
+        'attendance_allowance' => 'nullable|numeric|min:0',
+        'phone_allowance' => 'nullable|numeric|min:0',
+        'production_bonus' => 'nullable|numeric|min:0',
+        'car_allowance' => 'nullable|numeric|min:0',
+        'loan_payment' => 'nullable|numeric|min:0',
+        'stamp_duty' => 'nullable|numeric|min:0',
+        'no_pay' => 'nullable|numeric|min:0',
+        'advance_payment' => 'nullable|numeric|min:0',
+        'ot_payment' => 'nullable|numeric',
+        'epf_8_percent' => 'nullable|numeric',
+        'total_deductions' => 'nullable|numeric',
+        'total_earnings' => 'nullable|numeric',
+        'net_salary' => 'nullable|numeric',
+    ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
+    if ($validator->fails()) {
+        return redirect()->back()->withErrors($validator)->withInput();
+    }
 
-        try {
-            // Calculate deductions and net salary
-            $grossSalary = $request->gross_salary;
-            $noPayDeductions = ($request->no_pay ?? 0) * 1000;
-            $stampDuty = ($request->stamp_duty ?? 0) + 25;
-            $totalDeductions = (
-                ($request->epf_8_percent ?? 0) +
-                ($request->advance_payment ?? 0) +
-                ($request->loan_payment ?? 0) +
-                $stampDuty +
-                $noPayDeductions
-            );
+    try {
+        $employeeId = $request->employee_id;
+        $month = $request->payed_month;
 
-            $totalEarnings = (
-                $grossSalary +
-                ($request->transport_allowance ?? 0) +
-                ($request->attendance_allowance ?? 0) +
-                ($request->phone_allowance ?? 0) +
-                ($request->car_allowance ?? 0) +
-                ($request->production_bonus ?? 0)
-            );
+        // ✅ Check if a record already exists for this employee in this month
+        $existingRecord = SalaryDetails::where('employee_id', $employeeId)
+            ->where('payed_month', $month)
+            ->first();
 
-            $netSalary = $totalEarnings - $totalDeductions;
+        // Basic calculations
+        $grossSalary = $request->gross_salary;
+        $noPayDeductions = ($request->no_pay ?? 0) * 1000;
 
-            // Calculate EPF 12% and ETF 3% based on gross salary
-            $epf12Percent = round($grossSalary * 0.12, 2);
-            $etf3Percent = round($grossSalary * 0.03, 2);
+        // ✅ Use Rs.25 if stamp duty is empty or 0
+        $stampDuty = ($request->stamp_duty && $request->stamp_duty > 0)
+            ? $request->stamp_duty
+            : 25;
 
-            // Save the data to the database
-            SalaryDetails::create([
-                'employee_id' => $request->employee_id,
+        // ✅ Calculate total deductions
+        $totalDeductions = (
+            ($request->epf_8_percent ?? 0) +
+            ($request->advance_payment ?? 0) +
+            ($request->loan_payment ?? 0) +
+            $stampDuty +
+            $noPayDeductions
+        );
+
+        // ✅ Calculate total earnings
+        $totalEarnings = (
+            $grossSalary +
+            ($request->transport_allowance ?? 0) +
+            ($request->attendance_allowance ?? 0) +
+            ($request->phone_allowance ?? 0) +
+            ($request->car_allowance ?? 0) +
+            ($request->production_bonus ?? 0)
+        );
+
+        // ✅ Calculate net salary
+        $netSalary = $totalEarnings - $totalDeductions;
+
+        // ✅ EPF & ETF
+        $epf12Percent = round($grossSalary * 0.12, 2);
+        $etf3Percent = round($grossSalary * 0.03, 2);
+
+        // ✅ Insert or Update record
+        if ($existingRecord) {
+            $existingRecord->update([
                 'employee_name' => $request->employee_name,
                 'known_name' => $request->known_name,
                 'epf_no' => $request->epf_no,
@@ -100,7 +116,7 @@ class PayrollController extends Controller
                 'production_bonus' => $request->production_bonus,
                 'car_allowance' => $request->car_allowance,
                 'loan_payment' => $request->loan_payment,
-                'stamp_duty' => $stampDuty,
+                'stamp_duty' => $stampDuty, // ✅ save final value
                 'no_pay' => $request->no_pay,
                 'advance_payment' => $request->advance_payment,
                 'total_deductions' => $totalDeductions,
@@ -110,12 +126,45 @@ class PayrollController extends Controller
                 'epf_12_percent' => $epf12Percent,
                 'etf_3_percent' => $etf3Percent,
             ]);
-
-            return redirect()->route('management.payroll.payroll-management')->with('success', 'Payroll record saved successfully.');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to save the payroll record.')->withInput();
+        } else {
+            SalaryDetails::create([
+                'employee_id' => $employeeId,
+                'employee_name' => $request->employee_name,
+                'known_name' => $request->known_name,
+                'epf_no' => $request->epf_no,
+                'pay_date' => $request->pay_date,
+                'payed_month' => $request->payed_month,
+                'basic' => $request->basic,
+                'budget_allowance' => $request->budget_allowance,
+                'gross_salary' => $grossSalary,
+                'transport_allowance' => $request->transport_allowance,
+                'attendance_allowance' => $request->attendance_allowance,
+                'phone_allowance' => $request->phone_allowance,
+                'production_bonus' => $request->production_bonus,
+                'car_allowance' => $request->car_allowance,
+                'loan_payment' => $request->loan_payment,
+                'stamp_duty' => $stampDuty, // ✅ save final value
+                'no_pay' => $request->no_pay,
+                'advance_payment' => $request->advance_payment,
+                'total_deductions' => $totalDeductions,
+                'total_earnings' => $totalEarnings,
+                'net_salary' => $netSalary,
+                'epf_8_percent' => $request->epf_8_percent,
+                'epf_12_percent' => $epf12Percent,
+                'etf_3_percent' => $etf3Percent,
+            ]);
         }
+
+        return redirect()->route('management.payroll.payroll-management')
+            ->with('success', 'Payroll record saved successfully.');
+    } catch (\Exception $e) {
+        Log::error('Payroll save error: ' . $e->getMessage());
+        return redirect()->back()
+            ->with('error', 'Failed to save the payroll record.')
+            ->withInput();
     }
+}
+
 
 
     public function update(Request $request, $id)
