@@ -187,8 +187,9 @@
                  <div class="flex flex-col space-y-4 px-4">
                        <div >
                             <label for="stamp_duty" class="block text-xl text-black font-bold">Stamp Duty :</label>
-                           <input type="number" id="stamp_duty" name="stamp_duty" value="25.00" readonly
-                              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] bg-gray-100 text-gray-700 font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
+                            <input type="number" id="stamp_duty" name="stamp_duty" value="25" readonly
+    class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] bg-gray-100 text-gray-700 font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl"
+    oninput="calculateTotalDeductions()" />
 
                         </div>
                         <div >
@@ -256,19 +257,17 @@
         calculateTotalDeductions();
     }
 
-    function calculateTotalDeductions() {
+      function calculateTotalDeductions() {
         console.log("Calculating deductions...");
+
         const epf = parseFloat(document.getElementById('epf_8_percent').value) || 0;
         const advancePayment = parseFloat(document.getElementById('advance_payment').value) || 0;
         const loanPayment = parseFloat(document.getElementById('loan_payment').value) || 0;
-        // const stampDuty = parseFloat(document.getElementById('stamp_duty').value) || 0;
         const noPay = parseFloat(document.getElementById('no_pay').value) || 0;
+        const stampDuty = parseFloat(document.getElementById('stamp_duty').value) || 0; // ✅ included
 
-        const totalDeductions = epf + advancePayment + loanPayment +noPay;
-
-        
-
-
+        // ✅ Include stamp duty in total deductions
+        const totalDeductions = epf + advancePayment + loanPayment + noPay + stampDuty;
 
         document.getElementById('total_deductions').value = totalDeductions.toFixed(2);
         calculateTotalEarnings();
@@ -281,11 +280,8 @@
         const phoneAllowance = parseFloat(document.getElementById('phone_allowance').value) || 0;
         const carAllowance = parseFloat(document.getElementById('car_allowance').value) || 0;
         const prodBonus = parseFloat(document.getElementById('production_bonus').value) || 0;
-        const deductions = parseFloat(document.getElementById('total_deductions').value) || 0;
-
-
-
         const totalEarnings = grossSalary + transportAllowance + attendanceAllowance + phoneAllowance + carAllowance + prodBonus;
+
         document.getElementById('total_earnings').value = totalEarnings.toFixed(2);
         calculateNetSalary();
     }
@@ -299,9 +295,11 @@
         const prodBonus = parseFloat(document.getElementById('production_bonus').value) || 0;
         const deductions = parseFloat(document.getElementById('total_deductions').value) || 0;
 
+        // ✅ Correct net salary calculation
+        const totalEarnings = grossSalary + transportAllowance + attendanceAllowance + phoneAllowance + carAllowance + prodBonus;
+        const netSalary = totalEarnings - deductions;
 
-        const totalEarnings = grossSalary + transportAllowance + attendanceAllowance + phoneAllowance + carAllowance + prodBonus  - deductions;
-        document.getElementById('net_salary').value = totalEarnings.toFixed(2);
+        document.getElementById('net_salary').value = netSalary.toFixed(2);
     }
 $('#employee_id').on('change', function () {
     let employeeId = $(this).val();
@@ -329,6 +327,7 @@ $('#employee_id').on('change', function () {
                 $('#ot_payment').val(data.ot_payment);
                 $('#advance_payment').val(data.advance_payment);
                 $('#loan_payment').val(data.loan_payment);
+                $('#payed_month').val(data.payed_month);
                 calculateGrossSalary();
             },
             error: function () {
