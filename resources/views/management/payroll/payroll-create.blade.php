@@ -187,7 +187,9 @@
                  <div class="flex flex-col space-y-4 px-4">
                        <div >
                             <label for="stamp_duty" class="block text-xl text-black font-bold">Stamp Duty :</label>
-                            <input type="number" id="stamp_duty" name="stamp_duty" oninput="calculateTotalDeductions()" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
+                           <input type="number" id="stamp_duty" name="stamp_duty" value="25.00" readonly
+                              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] bg-gray-100 text-gray-700 font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
+
                         </div>
                         <div >
                             <label for="no_pay" class="block text-xl text-black font-bold">No Pay :</label>
