@@ -306,11 +306,11 @@ class ServerTest {
                         
                     case '2':
                         // $attTime = date('Y-m-d 08:30:00');
-                        $attTime = date('2025-10-11 08:30:00');
+                        $attTime = date('2025-10-10 08:30:00');
                         break;
                         
                     case '3':
-                        $attTime = date('2025-10-11 16:30:00');
+                        $attTime = date('2025-10-10 17:30:00');
                         // $attTime = date('Y-m-d 18:30:00');
                         break;
                         
