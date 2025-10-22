@@ -72,9 +72,10 @@ Route::middleware('auth')->group(function () {
    // Route::get('/dashboard/{section}', [DashboardController::class, 'show'])->name('dashboard.section');
 
    Route::get('/dashboard/employee/{id}', [EmployeeController::class, 'show'])->name('employee.details');
-   Route::get('/employee/{id}', [EmployeeController::class, 'show'])->name('employee.show');
-   Route::get('/employee/edit/{id}', [EmployeeController::class, 'edit'])->name('employee.edit');
-   Route::put('/employee/update/{id}', [EmployeeController::class, 'update'])->name('employee.update');
+    Route::get('/employee/{id}', [EmployeeController::class, 'show'])->name('employee.show');
+    Route::get('/employee/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit');
+
+    Route::put('/employee/update/{id}', [EmployeeController::class, 'update'])->name('employee.update');
    Route::delete('/employee/delete/{id}', [EmployeeController::class, 'delete']);
    Route::get('/searchemployees', [EmployeeController::class, 'GetSearchEmployees'])->name('employees.search');
    Route::get('/employees/create', [EmployeeController::class, 'create'])->name('employees.create');

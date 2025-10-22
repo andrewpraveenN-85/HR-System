@@ -22,12 +22,12 @@
 
 <div class="w-full pt-8">
   <div class="flex items-center justify-between w-full">
-  <div class="w-full flex justify-end items-end pt-4 pr-2">
-  <a href="{{ route('employee.edit', ['id' => $employee->id]) }}" class="flex items-center justify-center space-x-8 px-10 py-2 text-[#184E77] border-2 border-[#184E77] text-2xl bg-white rounded-xl shadow-sm hover:from-[#1B5A8A] hover:to-[#60C3A8]">
-        <p class="text-3xl"><i class="ri-edit-box-line"></i></p>
-        <span>Edit Details</span>
-  </a>
-  </div>
+    <div class="w-full flex justify-end items-end pt-4 pr-2">
+                <a href="{{ route('employee.edit', $employee->id) }}" class="inline-flex items-center px-5 py-2.5 text-lg font-semibold text-white bg-[#40916C] rounded-xl shadow hover:bg-[#1B4332] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#52B69A] transition">
+                        <i class="ri-edit-2-fill mr-2 text-xl"></i>
+                        Edit Employee
+                </a>
+    </div>
 </div>
 <nav class="flex px-5 py-3" aria-label="Breadcrumb">
   <ol class="inline-flex items-center space-x-1 md:space-x-3">

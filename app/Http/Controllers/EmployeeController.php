@@ -49,8 +49,25 @@ class EmployeeController extends Controller
     public function edit($id)
     {
         $employee = Employee::with(['department', 'education', 'bankDetails'])->findOrFail($id);
-        $departments = Department::all();
-        return view('management.employee.employee-edit', compact('employee', 'departments'));
+        $departments = Department::orderBy('name')->get();
+        $managers = Employee::where('id', '!=', $id)->orderBy('full_name')->get();
+
+        $legalDocuments = [];
+
+        if (!empty($employee->legal_documents)) {
+            if (is_string($employee->legal_documents)) {
+                $legalDocuments = json_decode($employee->legal_documents, true) ?: [];
+            } elseif (is_array($employee->legal_documents)) {
+                $legalDocuments = $employee->legal_documents;
+            }
+        }
+
+        return view('management.employee.edit-employee', [
+            'employee' => $employee,
+            'departments' => $departments,
+            'managers' => $managers,
+            'legalDocuments' => $legalDocuments,
+        ]);
     }
 
     /**
