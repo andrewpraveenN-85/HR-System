@@ -211,6 +211,11 @@ public function salaryDetails()
     return $this->hasOne(SalaryDetails::class, 'employee_id');
 }
 
+    public function saturdayAssignments()
+    {
+        return $this->hasMany(SaturdayAssignment::class);
+    }
+
 }
 
 

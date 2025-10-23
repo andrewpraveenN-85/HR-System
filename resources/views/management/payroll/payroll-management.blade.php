@@ -95,6 +95,12 @@
         <div class="flex items-center space-x-4">
 
 
+        <a href="{{ route('payroll.saturday-roster.index') }}" class="flex items-center justify-center nunito- space-x-2 px-6 py-2 text-[#184E77] border-2 border-[#184E77] md:text-2xl text-xl bg-white rounded-xl shadow-sm hover:bg-[#184E77] hover:text-white">
+            <span class="text-2xl"><i class="ri-calendar-event-line"></i></span>
+            <span>Saturday Roster</span>
+        </a>
+
+
         <!-- Filter Button -->
 
 

@@ -6,7 +6,6 @@ use App\Models\Payroll;
 use App\Models\Leave;
 use App\Models\Deduction;
 use App\Models\Allowance;
-use App\Models\Attendance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,10 +13,18 @@ use App\Models\SalaryDetails;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Services\OvertimeCalculator;
 
 
 class PayrollController extends Controller
 {
+    private OvertimeCalculator $overtimeCalculator;
+
+    public function __construct(OvertimeCalculator $overtimeCalculator)
+    {
+        $this->overtimeCalculator = $overtimeCalculator;
+    }
+
     public function create()
     {
       $employees = Employee::all(); // fetch all employees
@@ -278,45 +285,16 @@ class PayrollController extends Controller
         $currentAdvanceBalance = $latestSalary->advance_balance ?? 0;
         $newAdvanceBalance = max(0, $currentAdvanceBalance + $advancePayment);
 
-        // Calculate OT Payment
-        $attendanceRecords = Attendance::where('employee_id', $employeeId)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->get();
-            
-        $otRate = 0.0041667327;
-        $regularOTSeconds = 0;
-        $sundayOTSeconds = 0;
+        $periodStart = Carbon::parse($startDate);
+        $periodEnd = Carbon::parse($endDate);
 
         $employee = Employee::find($employeeId);
 
-        foreach ($attendanceRecords as $record) {
-            $dayOfWeek = date('w', strtotime($record->date));
-            $isDoubleOTDay = ($dayOfWeek == 0);
+        $overtimeResult = $this->overtimeCalculator->calculate($employee, $periodStart, $periodEnd);
 
-            // Check for department 2 on Saturday
-            if ($employee && $employee->department_id == 2 && $dayOfWeek == 6) {
-                if ($record->clock_in_time && $record->clock_out_time) {
-                    $workedSeconds = Carbon::parse($record->clock_out_time)->diffInSeconds(Carbon::parse($record->clock_in_time));
-
-                    if ($workedSeconds > 14400) {
-                        $saturdayTotalOTSeconds = ($workedSeconds - 14400);
-                        $regularOTSeconds += $saturdayTotalOTSeconds;
-                    }
-                }
-            } else {
-                // Original OT logic
-                if ($isDoubleOTDay) {
-                    $sundayWorkedSeconds = Carbon::parse($record->clock_out_time)->diffInSeconds(Carbon::parse($record->clock_in_time));
-                    $sundayOTSeconds += ($sundayWorkedSeconds);
-                } else {
-                    $regularOTSeconds += $record->overtime_seconds;
-                }
-            }
-        }
-
-        // Apply double OT rate for Sundays
-        $regularOTHours = $regularOTSeconds / 3600;
-        $sundayOTHours = $sundayOTSeconds / 3600;
+        $otRate = 0.0041667327;
+        $regularOTHours = $overtimeResult['regular_seconds'] / 3600;
+        $sundayOTHours = $overtimeResult['sunday_seconds'] / 3600;
 
         $otPayment = ($regularOTHours * (($grossSalary / 240) * 1.5)) +
                      ($sundayOTHours * ($grossSalary * 1.5 * $otRate * 2));
@@ -329,6 +307,7 @@ class PayrollController extends Controller
             'loan_balance' => array_sum($newLoanBalances),
             'advance_balance' => $newAdvanceBalance,
             'updated_loan_balances' => $newLoanBalances,
+            'overtime_breakdown' => $overtimeResult,
         ];
     }
 

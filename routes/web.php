@@ -16,6 +16,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\EmployeeContributionController;
 use App\Http\Controllers\PayrollExportController;
 use App\Http\Controllers\AdvanceController;
+use App\Http\Controllers\SaturdayRosterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -118,10 +119,18 @@ Route::prefix('management')->group(function () {
 Route::middleware('auth')->prefix('dashboard/payroll')->group(function () {
     Route::get('/', [PayrollController::class, 'create'])->name('payroll.create');
     Route::post('/store', [PayrollController::class, 'store'])->name('payroll.store');
-    Route::get('/{id}', [PayrollController::class, 'show'])->name('payroll.details');
-    Route::get('/{id}/edit', [PayrollController::class, 'edit'])->name('payroll.edit');
-    Route::put('/{id}', [PayrollController::class, 'update'])->name('payroll.update');
-    Route::delete('/{id}', [PayrollController::class, 'destroy'])->name('payroll.destroy');
+    Route::get('/{id}', [PayrollController::class, 'show'])
+        ->whereNumber('id')
+        ->name('payroll.details');
+    Route::get('/{id}/edit', [PayrollController::class, 'edit'])
+        ->whereNumber('id')
+        ->name('payroll.edit');
+    Route::put('/{id}', [PayrollController::class, 'update'])
+        ->whereNumber('id')
+        ->name('payroll.update');
+    Route::delete('/{id}', [PayrollController::class, 'destroy'])
+        ->whereNumber('id')
+        ->name('payroll.destroy');
 
     Route::get('/payroll', [PayrollController::class, 'index'])->name('payroll.index');
 Route::post('/payroll/{id}/update-advance-loan', [PayrollController::class, 'updateAdvanceAndLoan'])->name('payroll.update-advance-loan');
@@ -137,6 +146,10 @@ Route::get('/payroll/export/paysheets', [PayrollExportController::class, 'downlo
 
 Route::get('/payroll/generate/paysheets', [PayrollExportController::class, 'generatePreviousMonth'])->name('payroll.generate.paysheets');
 Route::get('/payroll/export/pdf', [PayrollExportController::class, 'exportSalaryPDF'])->name('payroll.export.pdf');
+
+Route::get('/saturday-roster', [SaturdayRosterController::class, 'index'])->name('payroll.saturday-roster.index');
+Route::post('/saturday-roster', [SaturdayRosterController::class, 'store'])->name('payroll.saturday-roster.store');
+Route::get('/saturday-roster/history', [SaturdayRosterController::class, 'history'])->name('payroll.saturday-roster.history');
 
 });
 
