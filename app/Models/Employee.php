@@ -39,6 +39,15 @@ class Employee extends Model
         'bank_name',
         'account_no',
         'branch_name',
+        'epf_no',
+        'basic',
+        'budget_allowance',
+        'transport_allowance',
+        'attendance_allowance',
+        'phone_allowance',
+        'car_allowance',
+        'production_bonus',
+        'stamp_duty',
         'annual_leave_balance',
         'annual_leave_used',
         'short_leave_balance',
@@ -179,6 +188,13 @@ class Employee extends Model
         if ($latestSalary) {
             return ($latestSalary->basic + $latestSalary->budget_allowance) / 30;
         }
+
+        if ($this->basic !== null) {
+            $base = (float) $this->basic + (float) ($this->budget_allowance ?? 0);
+            if ($base > 0) {
+                return $base / 30;
+            }
+        }
         
         return 1000; // Default daily rate
     }
@@ -194,6 +210,11 @@ public function salaryDetails()
 {
     return $this->hasOne(SalaryDetails::class, 'employee_id');
 }
+
+    public function saturdayAssignments()
+    {
+        return $this->hasMany(SaturdayAssignment::class);
+    }
 
 }
 

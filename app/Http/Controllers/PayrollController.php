@@ -12,159 +12,304 @@ use Illuminate\Support\Facades\Log;
 use App\Models\SalaryDetails;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use App\Services\OvertimeCalculator;
 
 
 class PayrollController extends Controller
 {
+    private OvertimeCalculator $overtimeCalculator;
+
+    public function __construct(OvertimeCalculator $overtimeCalculator)
+    {
+        $this->overtimeCalculator = $overtimeCalculator;
+    }
+
     public function create()
     {
       $employees = Employee::all(); // fetch all employees
     return view('management.payroll.payroll-create', compact('employees'));
     }
 
-    public function store(Request $request)
-{
-    // Validate the input data
-    $validator = Validator::make($request->all(), [
-        'employee_id' => 'required|exists:employees,id',
-        'employee_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\.]+$/',
-        'known_name' => 'nullable|string|max:255',
-        'epf_no' => 'nullable|integer|unique:employee_salary_details,epf_no',
-        'pay_date' => 'nullable|date',
-        'payed_month' => 'required|string|max:255',
-        'basic' => 'required|numeric|min:0',
-        'budget_allowance' => 'nullable|numeric|min:0',
-        'gross_salary' => 'required|numeric|min:0',
-        'transport_allowance' => 'nullable|numeric|min:0',
-        'attendance_allowance' => 'nullable|numeric|min:0',
-        'phone_allowance' => 'nullable|numeric|min:0',
-        'production_bonus' => 'nullable|numeric|min:0',
-        'car_allowance' => 'nullable|numeric|min:0',
-        'loan_payment' => 'nullable|numeric|min:0',
-        'stamp_duty' => 'nullable|numeric|min:0',
-        'no_pay' => 'nullable|numeric|min:0',
-        'advance_payment' => 'nullable|numeric|min:0',
-        'ot_payment' => 'nullable|numeric',
-        'epf_8_percent' => 'nullable|numeric',
-        'total_deductions' => 'nullable|numeric',
-        'total_earnings' => 'nullable|numeric',
-        'net_salary' => 'nullable|numeric',
-    ]);
+ public function store(Request $request)
+    {
+        // Validate the input data
+        $validator = Validator::make($request->all(), [
+            'employee_id' => 'required|exists:employees,id',
+            'employee_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\.]+$/',
+            'known_name' => 'nullable|string|max:255',
+            'epf_no' => 'nullable|string|max:255',
+            'pay_date' => 'nullable|date',
+            'payed_month' => 'required|string|max:255',
+            'basic' => 'required|numeric|min:0',
+            'budget_allowance' => 'nullable|numeric|min:0',
+            'gross_salary' => 'required|numeric|min:0',
+            'transport_allowance' => 'nullable|numeric|min:0',
+            'attendance_allowance' => 'nullable|numeric|min:0',
+            'phone_allowance' => 'nullable|numeric|min:0',
+            'production_bonus' => 'nullable|numeric|min:0',
+            'car_allowance' => 'nullable|numeric|min:0',
+            'loan_payment' => 'nullable|numeric|min:0',
+            'stamp_duty' => 'nullable|numeric|min:0',
+            'no_pay' => 'nullable|numeric|min:0',
+            'advance_payment' => 'nullable|numeric|min:0',
+            'ot_payment' => 'nullable|numeric',
+            'epf_8_percent' => 'nullable|numeric',
+            'total_deductions' => 'nullable|numeric',
+            'total_earnings' => 'nullable|numeric',
+            'net_salary' => 'nullable|numeric',
+        ]);
 
-    if ($validator->fails()) {
-        return redirect()->back()->withErrors($validator)->withInput();
-    }
-
-    try {
-        $employeeId = $request->employee_id;
-        $month = $request->payed_month;
-
-        // ✅ Check if a record already exists for this employee in this month
-        $existingRecord = SalaryDetails::where('employee_id', $employeeId)
-            ->where('payed_month', $month)
-            ->first();
-
-        // Basic calculations
-        $grossSalary = $request->gross_salary;
-        $noPayDeductions = ($request->no_pay ?? 0) * 1000;
-
-        // ✅ Use Rs.25 if stamp duty is empty or 0
-        $stampDuty = ($request->stamp_duty && $request->stamp_duty > 0)
-            ? $request->stamp_duty
-            : 25;
-
-        // ✅ Calculate total deductions
-        $totalDeductions = (
-            ($request->epf_8_percent ?? 0) +
-            ($request->advance_payment ?? 0) +
-            ($request->loan_payment ?? 0) +
-            $stampDuty +
-            $noPayDeductions
-        );
-
-        // ✅ Calculate total earnings
-        $totalEarnings = (
-            $grossSalary +
-            ($request->transport_allowance ?? 0) +
-            ($request->attendance_allowance ?? 0) +
-            ($request->phone_allowance ?? 0) +
-            ($request->car_allowance ?? 0) +
-            ($request->production_bonus ?? 0)
-        );
-
-        // ✅ Calculate net salary
-        $netSalary = $totalEarnings - $totalDeductions;
-
-        // ✅ EPF & ETF
-        $epf12Percent = round($grossSalary * 0.12, 2);
-        $etf3Percent = round($grossSalary * 0.03, 2);
-
-        // ✅ Insert or Update record
-        if ($existingRecord) {
-            $existingRecord->update([
-                'employee_name' => $request->employee_name,
-                'known_name' => $request->known_name,
-                'epf_no' => $request->epf_no,
-                'pay_date' => $request->pay_date,
-                'payed_month' => $request->payed_month,
-                'basic' => $request->basic,
-                'budget_allowance' => $request->budget_allowance,
-                'gross_salary' => $grossSalary,
-                'transport_allowance' => $request->transport_allowance,
-                'attendance_allowance' => $request->attendance_allowance,
-                'phone_allowance' => $request->phone_allowance,
-                'production_bonus' => $request->production_bonus,
-                'car_allowance' => $request->car_allowance,
-                'loan_payment' => $request->loan_payment,
-                'stamp_duty' => $stampDuty, // ✅ save final value
-                'no_pay' => $request->no_pay,
-                'advance_payment' => $request->advance_payment,
-                'total_deductions' => $totalDeductions,
-                'total_earnings' => $totalEarnings,
-                'net_salary' => $netSalary,
-                'epf_8_percent' => $request->epf_8_percent,
-                'epf_12_percent' => $epf12Percent,
-                'etf_3_percent' => $etf3Percent,
-            ]);
-        } else {
-            SalaryDetails::create([
-                'employee_id' => $employeeId,
-                'employee_name' => $request->employee_name,
-                'known_name' => $request->known_name,
-                'epf_no' => $request->epf_no,
-                'pay_date' => $request->pay_date,
-                'payed_month' => $request->payed_month,
-                'basic' => $request->basic,
-                'budget_allowance' => $request->budget_allowance,
-                'gross_salary' => $grossSalary,
-                'transport_allowance' => $request->transport_allowance,
-                'attendance_allowance' => $request->attendance_allowance,
-                'phone_allowance' => $request->phone_allowance,
-                'production_bonus' => $request->production_bonus,
-                'car_allowance' => $request->car_allowance,
-                'loan_payment' => $request->loan_payment,
-                'stamp_duty' => $stampDuty, // ✅ save final value
-                'no_pay' => $request->no_pay,
-                'advance_payment' => $request->advance_payment,
-                'total_deductions' => $totalDeductions,
-                'total_earnings' => $totalEarnings,
-                'net_salary' => $netSalary,
-                'epf_8_percent' => $request->epf_8_percent,
-                'epf_12_percent' => $epf12Percent,
-                'etf_3_percent' => $etf3Percent,
-            ]);
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        return redirect()->route('management.payroll.payroll-management')
-            ->with('success', 'Payroll record saved successfully.');
-    } catch (\Exception $e) {
-        Log::error('Payroll save error: ' . $e->getMessage());
-        return redirect()->back()
-            ->with('error', 'Failed to save the payroll record.')
-            ->withInput();
-    }
-}
+        try {
+            $employeeId = (int) $request->employee_id;
+            $month = trim((string) $request->payed_month);
+            $employee = Employee::find($employeeId);
 
+            $payDate = $request->pay_date
+                ? Carbon::parse($request->pay_date)
+                : Carbon::parse($month . '-01')->endOfMonth();
+
+            $employeeName = trim((string) $request->employee_name);
+            if ($employeeName === '' && $employee) {
+                $employeeName = trim((string) ($employee->full_name
+                    ?? trim(($employee->first_name ? $employee->first_name . ' ' : '') . ($employee->last_name ?? ''))));
+            }
+            if ($employeeName === '') {
+                $employeeName = 'N/A';
+            }
+
+            $knownNameInput = trim((string) $request->input('known_name', ''));
+            $knownName = $knownNameInput !== ''
+                ? $knownNameInput
+                : ($employee?->known_name
+                    ?? $employeeName
+                    ?? 'N/A');
+            if ($knownName === null || $knownName === '') {
+                $knownName = $employeeName !== '' ? $employeeName : 'N/A';
+            }
+
+            $epfNoInput = trim((string) $request->input('epf_no', ''));
+            $epfNo = $epfNoInput !== ''
+                ? $epfNoInput
+                : ($employee?->epf_no ?? 'N/A');
+            if ($epfNo === null || $epfNo === '') {
+                $epfNo = 'N/A';
+            }
+
+            $budgetAllowance = (float) ($request->budget_allowance ?? ($employee?->budget_allowance ?? 0));
+
+            // ✅ Check if a record already exists for this employee in this month
+            $existingRecord = SalaryDetails::where('employee_id', $employeeId)
+                ->where('payed_month', $month)
+                ->first();
+
+            // Basic calculations
+            $grossSalary = (float) $request->gross_salary;
+
+            // ============== NEW: AUTO-CALCULATE OT, LOANS, AND ADVANCES ==============
+            $calculatedData = $this->calculatePayrollData($employeeId, $month, $grossSalary);
+            
+            // Use calculated values or manual input (manual takes priority)
+            $otPayment = $request->ot_payment ?? $calculatedData['ot_payment'];
+            $loanPayment = $request->loan_payment ?? $calculatedData['loan_payment'];
+            $advancePayment = $request->advance_payment ?? $calculatedData['advance_payment'];
+            $leaveNoPayAmount = $calculatedData['leave_no_pay'];
+            $loanBalance = $calculatedData['loan_balance'];
+            $advanceBalance = $calculatedData['advance_balance'];
+
+            $noPayDeductions = (($request->no_pay ?? 0) * 1000) + $leaveNoPayAmount;
+
+            // ✅ Use Rs.25 if stamp duty is empty or 0
+            $stampDuty = ($request->stamp_duty && $request->stamp_duty > 0)
+                ? $request->stamp_duty
+                : 25;
+
+            // ✅ Calculate EPF 8%
+            $epf8Percent = $request->epf_8_percent ?? round($grossSalary * 0.08, 2);
+
+            // ✅ Calculate total deductions
+            $totalDeductions = (
+                $epf8Percent +
+                $advancePayment +
+                $loanPayment +
+                $stampDuty +
+                $noPayDeductions
+            );
+
+            // ✅ Calculate total earnings
+            $totalEarnings = (
+                $grossSalary +
+                ($request->transport_allowance ?? 0) +
+                ($request->attendance_allowance ?? 0) +
+                ($request->phone_allowance ?? 0) +
+                ($request->car_allowance ?? 0) +
+                ($request->production_bonus ?? 0) +
+                $otPayment
+            );
+
+            // ✅ Calculate net salary
+            $netSalary = $totalEarnings - $totalDeductions;
+
+            // ✅ EPF & ETF
+            $epf12Percent = round($grossSalary * 0.12, 2);
+            $etf3Percent = round($grossSalary * 0.03, 2);
+
+            $recordData = [
+                'employee_name' => $employeeName,
+                'known_name' => $knownName,
+                'epf_no' => $epfNo,
+                'pay_date' => $payDate->toDateString(),
+                'payed_month' => $month,
+                'basic' => $request->basic,
+                'budget_allowance' => $budgetAllowance,
+                'gross_salary' => $grossSalary,
+                'transport_allowance' => $request->transport_allowance,
+                'attendance_allowance' => $request->attendance_allowance,
+                'phone_allowance' => $request->phone_allowance,
+                'production_bonus' => $request->production_bonus,
+                'car_allowance' => $request->car_allowance,
+                'loan_payment' => $loanPayment,
+                'advance_payment' => $advancePayment,
+                'ot_payment' => $otPayment,
+                'stamp_duty' => $stampDuty,
+                'no_pay' => ($request->no_pay ?? 0) + ($leaveNoPayAmount / 1000), // Convert back to days
+                'total_deductions' => $totalDeductions,
+                'total_earnings' => $totalEarnings,
+                'net_salary' => $netSalary,
+                'epf_8_percent' => $epf8Percent,
+                'epf_12_percent' => $epf12Percent,
+                'etf_3_percent' => $etf3Percent,
+                'loan_balance' => $loanBalance,
+                'advance_balance' => $advanceBalance,
+            ];
+
+            // ✅ Insert or Update record
+            if ($existingRecord) {
+                $existingRecord->update($recordData);
+            } else {
+                $recordData['employee_id'] = $employeeId;
+                SalaryDetails::create($recordData);
+            }
+
+            // Update loan balances in the database
+            if (!empty($calculatedData['updated_loan_balances'])) {
+                foreach ($calculatedData['updated_loan_balances'] as $loanId => $newBalance) {
+                    DB::table('loans')
+                        ->where('id', $loanId)
+                        ->update([
+                            'remaining_balance' => $newBalance,
+                            'updated_at' => now()
+                        ]);
+
+                    // Mark loan as completed if balance reaches zero
+                    if ($newBalance == 0) {
+                        DB::table('loans')
+                            ->where('id', $loanId)
+                            ->update([
+                                'loan_end_date' => now()
+                            ]);
+                    }
+                }
+            }
+
+            return redirect()->route('payroll.management')
+                ->with('success', 'Payroll record saved successfully with auto-calculated OT, loans, and advances.');
+        } catch (\Exception $e) {
+            Log::error('Payroll save error', [
+                'employee_id' => $request->employee_id,
+                'payed_month' => $request->payed_month,
+                'message' => $e->getMessage(),
+            ]);
+            return redirect()->back()
+                ->with('error', 'Failed to save the payroll record.')
+                ->withInput();
+        }
+    }
+
+    private function calculatePayrollData($employeeId, $selectedMonth, $grossSalary)
+    {
+        // Date range calculation (5th to 5th of next month)
+        $startDate = date('Y-m-05', strtotime($selectedMonth));
+        $endDate = date('Y-m-05', strtotime('+1 month', strtotime($selectedMonth)));
+        
+        // Calculate leave-based no-pay deductions
+        $leaveNoPayAmount = Leave::where('employee_id', $employeeId)
+            ->where('is_no_pay', true)
+            ->whereBetween('start_date', [$startDate, $endDate])
+            ->sum('no_pay_amount');
+
+        // ========== Get approved loans for this employee ==========
+        $approvedLoans = DB::table('loans')
+            ->where('employee_id', $employeeId)
+            ->where('status', 'approved')
+            ->get();
+
+        // Calculate total monthly loan payment
+        $totalMonthlyLoanPayment = 0;
+        $newLoanBalances = [];
+
+        foreach ($approvedLoans as $loan) {
+            // Calculate monthly payment for each active loan
+            if ($loan->remaining_balance > 0) {
+                $monthlyPayment = $loan->monthly_paid;
+                
+                // If remaining balance is less than monthly payment, pay only the remaining
+                $actualPayment = min($monthlyPayment, $loan->remaining_balance);
+                $totalMonthlyLoanPayment += $actualPayment;
+                
+                // Update remaining balance for this loan
+                $newLoanBalances[$loan->id] = max(0, $loan->remaining_balance - $actualPayment);
+            }
+        }
+
+        // ========== Get approved advances for this employee ==========
+        $approvedAdvances = DB::table('advances')
+            ->where('employment_ID', $employeeId)
+            ->where('status', 'approved')
+            ->whereBetween('advance_date', [$startDate, $endDate])
+            ->get();
+
+        // Calculate total advance amount for this period
+        $advancePayment = $approvedAdvances->sum('advance_amount');
+        
+        // Get current advance balance from latest salary record
+        $latestSalary = SalaryDetails::where('employee_id', $employeeId)
+            ->orderBy('created_at', 'desc')
+            ->first();
+        
+        // Calculate new advance balance
+        $currentAdvanceBalance = $latestSalary->advance_balance ?? 0;
+        $newAdvanceBalance = max(0, $currentAdvanceBalance + $advancePayment);
+
+        $periodStart = Carbon::parse($startDate);
+        $periodEnd = Carbon::parse($endDate);
+
+        $employee = Employee::find($employeeId);
+
+        $overtimeResult = $this->overtimeCalculator->calculate($employee, $periodStart, $periodEnd);
+
+        $otRate = 0.0041667327;
+        $regularOTHours = $overtimeResult['regular_seconds'] / 3600;
+        $sundayOTHours = $overtimeResult['sunday_seconds'] / 3600;
+
+        $otPayment = ($regularOTHours * (($grossSalary / 240) * 1.5)) +
+                     ($sundayOTHours * ($grossSalary * 1.5 * $otRate * 2));
+
+        return [
+            'ot_payment' => round($otPayment, 2),
+            'loan_payment' => $totalMonthlyLoanPayment,
+            'advance_payment' => $advancePayment,
+            'leave_no_pay' => $leaveNoPayAmount,
+            'loan_balance' => array_sum($newLoanBalances),
+            'advance_balance' => $newAdvanceBalance,
+            'updated_loan_balances' => $newLoanBalances,
+            'overtime_breakdown' => $overtimeResult,
+        ];
+    }
 
 
     public function update(Request $request, $id)
@@ -299,35 +444,39 @@ public function destroy($id)
     return redirect()->route('dashboard.payroll')->with('success', 'Payroll record deleted successfully!');
 }
 
-public function getSalaryDetails($id)
-{
-    // Get the employee
-    $employee = Employee::find($id);
+    public function getSalaryDetails($id)
+    {
+        $employeeRecord = Employee::find($id);
 
-    // Get the salary details
-    $salaryDetails = SalaryDetails::where('employee_id', $id)->first();
+        if ($employeeRecord === null) {
+            return response()->json(['error' => 'No data found'], 404);
+        }
 
+        $latestSalary = SalaryDetails::where('employee_id', $id)
+            ->orderByDesc('pay_date')
+            ->orderByDesc('created_at')
+            ->first();
 
-    if (!$employee || !$salaryDetails) {
-        return response()->json(['error' => 'No data found'], 404);
+        $basic = (float) ($employeeRecord->basic ?? 0);
+        $budgetAllowance = (float) ($employeeRecord->budget_allowance ?? 0);
+
+        return response()->json([
+            'employee_name' => $employeeRecord->full_name,
+            'gross_salary' => round($basic + $budgetAllowance, 2),
+            'transport_allowance' => (float) ($employeeRecord->transport_allowance ?? 0),
+            'attendance_allowance' => (float) ($employeeRecord->attendance_allowance ?? 0),
+            'phone_allowance' => (float) ($employeeRecord->phone_allowance ?? 0),
+            'car_allowance' => (float) ($employeeRecord->car_allowance ?? 0),
+            'production_bonus' => (float) ($employeeRecord->production_bonus ?? 0),
+            'basic' => $basic,
+            'budget_allowance' => $budgetAllowance,
+            'stamp_duty' => (float) ($employeeRecord->stamp_duty ?? 25.00),
+            'epf_no' => $employeeRecord->epf_no,
+            'advance_payment' => (float) ($latestSalary->advance_payment ?? 0),
+            'loan_payment' => (float) ($latestSalary->loan_payment ?? 0),
+            'ot_payment' => (float) ($latestSalary->ot_payment ?? 0),
+        ]);
     }
-
-    // Return all required data as JSON
-    return response()->json([
-        'employee_name' => $employee->full_name,
-        'gross_salary' => $salaryDetails->gross_salary,
-        'transport_allowance' => $salaryDetails->transport_allowance,
-        'attendance_allowance' => $salaryDetails->attendance_allowance,
-        'phone_allowance' => $salaryDetails->phone_allowance,
-        'car_allowance' => $salaryDetails->car_allowance,
-        'basic' => $salaryDetails->basic,
-        'budget_allowance' => $salaryDetails->budget_allowance,
-        'production_bonus' => $salaryDetails->production_bonus,
-        'ot_payment' => $salaryDetails->ot_payment,
-        'advance_payment' => $salaryDetails->advance_payment,
-        'loan_payment' => $salaryDetails->loan_payment,
-    ]);
-}
 public function getNoPayLeave($id,$month)
 {
     $startDate = date('Y-m-05', strtotime($month));
