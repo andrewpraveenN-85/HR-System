@@ -89,8 +89,8 @@
 
                 <div class="flex flex-col space-y-4 text-black font-bold">
                     <div>
-                        <label for="first_name" class="text-xl">Full Name</label>
-                        <input type="text" id="full_name" name="full_name" placeholder="Enter First Name"
+                        <label for="full_name" class="text-xl">Full Name</label>
+                        <input type="text" id="full_name" name="full_name" placeholder="Enter Full Name"
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required />
                     </div>
 
@@ -103,6 +103,11 @@
                     <div>
                         <label for="title" class="text-xl">Job Title</label>
                         <input type="text" id="title" name="title" placeholder="Enter Job Title"
+                            class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required />
+                    </div>
+                    <div>
+                        <label for="department_id" class="text-xl">Department ID</label>
+                        <input type="text" id="department_id" name="department_id" placeholder="Enter Job Title"
                             class="w-full p-2 text-xl border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required />
                     </div>
 
