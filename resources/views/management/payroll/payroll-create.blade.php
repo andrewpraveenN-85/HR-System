@@ -83,8 +83,8 @@
 
 
                     <div class="w-full">
-                        <label for="employee_name" class="block text-xl text-black font-bold">Employee Name :</label>
-                        <input type="text" id="employee_name" name="employee_name" placeholder="Enter Employee Name" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
+                        <label for="full_name" class="block text-xl text-black font-bold">Employee Name :</label>
+                        <input type="text" id="full_name" name="full_name" placeholder="Enter Employee Name" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" />
                     </div>
                     <div class="w-full">
                        <span for="payed_month" class="block text-xl text-black font-bold">Select a Month</span>
@@ -301,69 +301,69 @@
 
         document.getElementById('net_salary').value = netSalary.toFixed(2);
     }
-$('#employee_id').on('change', function () {
-    let employeeId = $(this).val();
+    $('#employee_id').on('change', function () {
+        let employeeId = $(this).val();
 
-    if (employeeId) {
-        $.ajax({
-            url: `/employees/${employeeId}/salary-details`,
-            type: 'GET',
-            success: function (data) {
-                if (data.error) {
-                    alert(data.error);
-                    return;
+        if (employeeId) {
+            $.ajax({
+                url: `/employees/${employeeId}/salary-details`,
+                type: 'GET',
+                success: function (data) {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+
+                    // Fill the fields from employee table
+                    $('#full_name').val(data.full_name);
+                    $('#basic').val(data.basic);
+                    $('#budget_allowance').val(data.budget_allowance);
+                    $('#transport_allowance').val(data.transport_allowance);
+                    $('#attendance_allowance').val(data.attendance_allowance);
+                    $('#phone_allowance').val(data.phone_allowance);
+                    $('#car_allowance').val(data.car_allowance);
+                    $('#production_bonus').val(data.production_bonus);
+
+                    // Calculate gross salary dynamically
+                    calculateGrossSalary();
+                },
+                error: function () {
+                    alert('Failed to fetch employee salary details.');
                 }
+            });
+        } else {
+            // Reset fields if no employee is selected
+            $('#full_name, #basic, #budget_allowance, #transport_allowance, #attendance_allowance, #phone_allowance, #car_allowance, #production_bonus, #gross_salary').val('');
+        }
+    });
 
-                // Fill the fields
-                $('#employee_name').val(data.employee_name);
-                $('#gross_salary').val(data.gross_salary);
-                $('#transport_allowance').val(data.transport_allowance);
-                $('#attendance_allowance').val(data.attendance_allowance);
-                $('#phone_allowance').val(data.phone_allowance);
-                $('#car_allowance').val(data.car_allowance);
-                $('#basic').val(data.basic);
-                $('#budget_allowance').val(data.budget_allowance);
-                $('#production_bonus').val(data.production_bonus);
-                $('#ot_payment').val(data.ot_payment);
-                $('#advance_payment').val(data.advance_payment);
-                $('#loan_payment').val(data.loan_payment);
-                $('#payed_month').val(data.payed_month);
-                calculateGrossSalary();
-            },
-            error: function () {
-                alert('Failed to fetch employee salary details.');
-            }
-        });
-    }
-});
+// $('#monthSelector').on('change', function () {
+//     let month = $(this).val(); // Get the selected month
+//     let id = $('#employee_id').val(); // Get employee ID
 
-$('#monthSelector').on('change', function () {
-    let month = $(this).val(); // Get the selected month
-    let id = $('#employee_id').val(); // Get employee ID
+//     if (month && id) {
+//         $.ajax({
+//             url: `/employees/${id}/no-pay/${month}`,
+//             type: 'GET',
+//             success: function (data) {
 
-    if (month && id) {
-        $.ajax({
-            url: `/employees/${id}/no-pay/${month}`,
-            type: 'GET',
-            success: function (data) {
+//                 if (data.error) {
+//                     alert(data.error);
+//                     return;
+//                 }
 
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-
-                // Fill the no pay field
-                $('#no_pay').val(data.no_pay_amount);
-                calculateGrossSalary();
-            },
-            error: function (xhr, status, error) {
-                alert('Failed to fetch no pay details.');
-            }
-        });
-    } else {
-        console.warn("⚠️ Month or Employee ID not selected");
-    }
-});
+//                 // Fill the no pay field
+//                 $('#no_pay').val(data.no_pay_amount);
+//                 calculateGrossSalary();
+//             },
+//             error: function (xhr, status, error) {
+//                 alert('Failed to fetch no pay details.');
+//             }
+//         });
+//     } else {
+//         console.warn("⚠️ Month or Employee ID not selected");
+//     }
+// });
 
 
 

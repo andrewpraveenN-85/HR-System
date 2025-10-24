@@ -246,8 +246,8 @@ Route::middleware('auth')->prefix('dashboard/contributions')->group(function () 
 
     Route::post('/store-or-update/{id}', [EmployeeContributionController::class, 'storeOrUpdate'])->name('employee_contributions.store_or_update');
 });
-Route::get('/employees/{id}/salary-details', [App\Http\Controllers\PayrollController::class, 'getSalaryDetails']);
-Route::get('/employees/{id}/no-pay/{month}', [App\Http\Controllers\PayrollController::class, 'getNoPayLeave']);
+Route::get('/employees/{id}/salary-details', [App\Http\Controllers\EmployeeController::class, 'getSalaryDetails']);
+// Route::get('/employees/{id}/no-pay/{month}', [App\Http\Controllers\PayrollController::class, 'getNoPayLeave']);
 
 
 

@@ -238,7 +238,7 @@ class EmployeeController extends Controller
         $isFirstEmployee = Employee::count() === 0;
 
         $validated = $request->validate([
-            'full_name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'full_name' => 'required|string|max:255|regex:/^[a-zA-Z\s\.]+$/',
             'employee_id' => 'required|string|max:255|unique:employees,employee_id',
             // 'first_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
             // 'last_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
@@ -456,11 +456,11 @@ public function getSalaryDetails($id)
     $employee = Employee::find($id);
 
     if (!$employee) {
-        return response()->json(['error' => 'Salary details not found'], 404);
+        return response()->json(['error' => 'Employee not found'], 404);
     }
 
     return response()->json([
-        'epf_no' => $employee->epf_no,
+        'full_name' => $employee->full_name ,
         'basic' => $employee->basic,
         'budget_allowance' => $employee->budget_allowance,
         'transport_allowance' => $employee->transport_allowance,
@@ -468,8 +468,6 @@ public function getSalaryDetails($id)
         'phone_allowance' => $employee->phone_allowance,
         'car_allowance' => $employee->car_allowance,
         'production_bonus' => $employee->production_bonus,
-        'stamp_duty' => $employee->stamp_duty,
-        'gross_salary' => ($employee->basic ?? 0) + ($employee->budget_allowance ?? 0),
     ]);
 }
 
