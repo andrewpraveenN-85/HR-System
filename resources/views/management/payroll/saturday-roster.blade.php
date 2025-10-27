@@ -39,7 +39,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-4xl font-bold text-black">Head Office Saturday Roster</h1>
-                    <p class="mt-2 text-base text-gray-600">Plan which team works on {{ $workDate->format('l, d M Y') }}. Head Office shift runs 08:30 – 16:30; hours after 16:30 are charged as OT. Factory teams automatically appear in payroll and always cover Saturdays 08:30 – 13:00.</p>
+                    <p class="mt-2 text-base text-gray-600">Plan which team works on {{ $workDate->format('l, d M Y') }}. Head Office shift runs 08:30 – 16:30. First 2 Saturdays per month count as regular work days (hours after 16:30 are OT). Additional Saturdays (3rd, 4th, etc.) are full OT days. Factory teams automatically appear in payroll and always cover Saturdays 08:30 – 13:00.</p>
                 </div>
                 <div class="flex items-center space-x-2 rounded-2xl bg-[#184E77] px-4 py-2 text-white">
                     <span class="text-sm uppercase tracking-wide">Head Office</span>
@@ -76,7 +76,7 @@
                     <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
                         <div>
                             <p class="text-lg font-semibold text-black">Select the team</p>
-                            <p class="text-sm text-gray-500">Each employee is expected to cover two Saturdays within the month. Extra Saturdays will be paid as OT days.</p>
+                            <p class="text-sm text-gray-500">Employees can be assigned to multiple Saturdays. The first two worked Saturdays per month are regular work days; any additional Saturdays will be paid as full OT days.</p>
                         </div>
                         <div class="flex items-center space-x-3 text-sm">
                             <button type="button" id="select-all" class="rounded-xl border border-[#184E77] px-3 py-1 text-[#184E77] hover:bg-[#184E77] hover:text-white">Select all</button>
@@ -115,7 +115,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-2xl font-bold text-black">Monthly coverage snapshot</h2>
-                    <p class="mt-1 text-sm text-gray-500">Tracking {{ $monthStart->format('F Y') }}. Employees flagged below have fewer than two Saturday attendances so far.</p>
+                    <p class="mt-1 text-sm text-gray-500">Tracking {{ $monthStart->format('F Y') }}. Regular Days = first 2 worked Saturdays (normal pay). OT Days = 3rd, 4th+ worked Saturdays (full OT pay). Employees flagged below have fewer than two Saturday attendances.</p>
                 </div>
             </div>
 
@@ -127,6 +127,8 @@
                             <th class="px-4 py-3">Scheduled</th>
                             <th class="px-4 py-3">Worked (Scheduled)</th>
                             <th class="px-4 py-3">Worked (Extra)</th>
+                            <th class="px-4 py-3">Regular Days</th>
+                            <th class="px-4 py-3">OT Days</th>
                             <th class="px-4 py-3">Total Worked</th>
                             <th class="px-4 py-3">Status</th>
                         </tr>
@@ -143,6 +145,16 @@
                                 <td class="px-4 py-3">{{ $row['scheduled_count'] }}</td>
                                 <td class="px-4 py-3">{{ $row['worked_scheduled'] }}</td>
                                 <td class="px-4 py-3">{{ $row['worked_extra'] }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
+                                        {{ $row['regular_saturdays'] }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
+                                        {{ $row['ot_saturdays'] }}
+                                    </span>
+                                </td>
                                 <td class="px-4 py-3 font-semibold">{{ $row['total_worked'] }}</td>
                                 <td class="px-4 py-3">
                                     @if($row['total_worked'] >= 2)
@@ -154,7 +166,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-4 text-center text-sm text-gray-500">No head office employees available for this month.</td>
+                                <td colspan="8" class="px-4 py-4 text-center text-sm text-gray-500">No head office employees available for this month.</td>
                             </tr>
                         @endforelse
                     </tbody>

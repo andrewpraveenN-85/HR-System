@@ -73,40 +73,60 @@ class OvertimeCalculator
 
         $summary = [];
         $regularOtSeconds = 0;
-        $standardSaturdaysWorked = 0;
 
         $saturdayRecords = $attendanceRecords->filter(function ($record) {
             return Carbon::parse($record->date)->isSaturday();
         })->sortBy('date');
 
+        // Group Saturday records by month to track first 2 per month
+        $saturdaysByMonth = [];
         foreach ($saturdayRecords as $record) {
-            $date = Carbon::parse($record->date)->toDateString();
-            $workedSeconds = $this->calculateWorkedSeconds($record);
-            if ($workedSeconds <= 0) {
-                continue;
+            $date = Carbon::parse($record->date);
+            $monthKey = $date->format('Y-m');
+            if (!isset($saturdaysByMonth[$monthKey])) {
+                $saturdaysByMonth[$monthKey] = [];
             }
+            $saturdaysByMonth[$monthKey][] = $record;
+        }
 
-            $isAssigned = $assignments->has($date);
+        // Process each month separately
+        foreach ($saturdaysByMonth as $monthKey => $monthRecords) {
+            $standardSaturdaysWorkedThisMonth = 0;
 
-            if ($isAssigned && $standardSaturdaysWorked < 2) {
-                $standardSaturdaysWorked++;
-                $regularPortion = min($workedSeconds, self::HEAD_OFFICE_STANDARD_SECONDS);
-                $otPortion = max(0, $workedSeconds - self::HEAD_OFFICE_STANDARD_SECONDS);
-                $regularOtSeconds += $otPortion;
-                $summary[$date] = [
-                    'status' => 'scheduled_worked',
-                    'worked_seconds' => $workedSeconds,
-                    'ot_seconds' => $otPortion,
-                    'assigned' => true,
-                ];
-            } else {
-                $regularOtSeconds += $workedSeconds;
-                $summary[$date] = [
-                    'status' => $isAssigned ? 'scheduled_extra_ot' : 'unscheduled_ot',
-                    'worked_seconds' => $workedSeconds,
-                    'ot_seconds' => $workedSeconds,
-                    'assigned' => $isAssigned,
-                ];
+            foreach ($monthRecords as $record) {
+                $date = Carbon::parse($record->date)->toDateString();
+                $workedSeconds = $this->calculateWorkedSeconds($record);
+                if ($workedSeconds <= 0) {
+                    continue;
+                }
+
+                $isAssigned = $assignments->has($date);
+
+                // First 2 assigned and worked Saturdays per month are regular work days
+                if ($isAssigned && $standardSaturdaysWorkedThisMonth < 2) {
+                    $standardSaturdaysWorkedThisMonth++;
+                    // Only hours beyond 8 hours are OT
+                    $regularPortion = min($workedSeconds, self::HEAD_OFFICE_STANDARD_SECONDS);
+                    $otPortion = max(0, $workedSeconds - self::HEAD_OFFICE_STANDARD_SECONDS);
+                    $regularOtSeconds += $otPortion;
+                    $summary[$date] = [
+                        'status' => 'scheduled_worked',
+                        'worked_seconds' => $workedSeconds,
+                        'ot_seconds' => $otPortion,
+                        'assigned' => true,
+                        'is_regular_saturday' => true,
+                    ];
+                } else {
+                    // Any additional Saturdays (3rd, 4th, etc.) are full OT days
+                    $regularOtSeconds += $workedSeconds;
+                    $summary[$date] = [
+                        'status' => $isAssigned ? 'scheduled_extra_ot' : 'unscheduled_ot',
+                        'worked_seconds' => $workedSeconds,
+                        'ot_seconds' => $workedSeconds,
+                        'assigned' => $isAssigned,
+                        'is_regular_saturday' => false,
+                    ];
+                }
             }
         }
 
