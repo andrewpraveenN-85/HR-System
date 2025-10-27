@@ -327,6 +327,10 @@ class SaturdayRosterController extends Controller
             $workedExtra = count(array_diff($attendanceDates, $scheduledDates));
             $scheduledCount = count($scheduledDates);
             $workedCount = count($attendanceDates);
+            
+            // Calculate regular vs OT Saturdays
+            $regularSaturdays = min($workedScheduled, 2);
+            $otSaturdays = max(0, $workedScheduled - 2) + $workedExtra;
 
             $summary[] = [
                 'employee' => $employee,
@@ -334,6 +338,8 @@ class SaturdayRosterController extends Controller
                 'worked_scheduled' => $workedScheduled,
                 'worked_extra' => $workedExtra,
                 'total_worked' => $workedCount,
+                'regular_saturdays' => $regularSaturdays,
+                'ot_saturdays' => $otSaturdays,
                 'needs_attention' => $workedCount < 2,
             ];
         }
