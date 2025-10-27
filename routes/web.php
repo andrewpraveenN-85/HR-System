@@ -249,5 +249,33 @@ Route::middleware('auth')->prefix('dashboard/contributions')->group(function () 
 Route::get('/employees/{id}/salary-details', [App\Http\Controllers\PayrollController::class, 'getSalaryDetails']);
 Route::get('/employees/{id}/no-pay/{month}', [App\Http\Controllers\PayrollController::class, 'getNoPayLeave']);
 
+// Debug route for Saturday OT calculation
+// Route::get('/debug/saturday-ot/{employeeId}/{month}', function ($employeeId, $month) {
+//     $employee = \App\Models\Employee::with('department')->findOrFail($employeeId);
+//     $startDate = date('Y-m-05', strtotime($month));
+//     $endDate = date('Y-m-05', strtotime('+1 month', strtotime($month)));
+    
+//     $overtimeCalculator = app(\App\Services\OvertimeCalculator::class);
+//     $result = $overtimeCalculator->calculate($employee, \Carbon\Carbon::parse($startDate), \Carbon\Carbon::parse($endDate));
+    
+//     return response()->json([
+//         'employee' => $employee->full_name,
+//         'department' => $employee->department->name ?? 'N/A',
+//         'branch' => $employee->department->branch ?? 'N/A',
+//         'period' => "{$startDate} to {$endDate}",
+//         'regular_ot_seconds' => $result['regular_seconds'],
+//         'regular_ot_hours' => $result['regular_seconds'] / 3600,
+//         'sunday_ot_hours' => $result['sunday_seconds'] / 3600,
+//         'head_office_summary' => $result['head_office_summary'] ?? [],
+//         'saturday_assignments' => \App\Models\SaturdayAssignment::where('employee_id', $employeeId)
+//             ->whereBetween('work_date', [$startDate, $endDate])
+//             ->get(),
+//         'saturday_attendance' => \App\Models\Attendance::where('employee_id', $employeeId)
+//             ->whereBetween('date', [$startDate, $endDate])
+//             ->whereRaw('DAYOFWEEK(date) = 7') // Saturday
+//             ->get(),
+//     ]);
+// })->middleware('auth');
+
 
 

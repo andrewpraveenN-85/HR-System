@@ -12,6 +12,7 @@ use Spatie\SimpleExcel\SimpleExcelWriter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Exports\BankDetailsExport;
 use App\Services\OvertimeCalculator;
 
@@ -103,7 +104,7 @@ public function generatePreviousMonth(Request $request)
 
     $recordsGenerated = 0;
 
-    foreach ($employees as $employee) {
+foreach ($employees as $employee) {
         // Date range calculation (5th of selected month to 5th of next month)
         $startDate = date('Y-m-05', strtotime($selectedMonth));
         $endDate = date('Y-m-05', strtotime('+1 month', strtotime($selectedMonth)));
@@ -170,11 +171,29 @@ public function generatePreviousMonth(Request $request)
         $periodStart = Carbon::parse($startDate);
         $periodEnd = Carbon::parse($endDate);
 
+        // Ensure employee has department relationship loaded for OvertimeCalculator
+        if (!$employee->relationLoaded('department')) {
+            $employee->load('department');
+        }
+        
         $overtimeResult = $this->overtimeCalculator->calculate($employee, $periodStart, $periodEnd);
 
         $otRate = 0.0041667327;
         $regularOTHours = $overtimeResult['regular_seconds'] / 3600;
         $sundayOTHours = $overtimeResult['sunday_seconds'] / 3600;
+
+        // Debug logging for Saturday OT (remove after testing)
+        if ($regularOTHours > 0 || $sundayOTHours > 0) {
+            Log::info("OT Calculation for {$employee->full_name}", [
+                'employee_id' => $employee->id,
+                'period' => "{$startDate} to {$endDate}",
+                'regular_ot_seconds' => $overtimeResult['regular_seconds'],
+                'regular_ot_hours' => $regularOTHours,
+                'sunday_ot_hours' => $sundayOTHours,
+                'gross_salary' => $grossSalary,
+                'head_office_summary' => $overtimeResult['head_office_summary'] ?? [],
+            ]);
+        }
 
         $otPayment = ($regularOTHours * (($grossSalary / 240) * 1.5)) +
                      ($sundayOTHours * ($grossSalary * 1.5 * $otRate * 2));
