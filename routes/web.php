@@ -249,5 +249,8 @@ Route::middleware('auth')->prefix('dashboard/contributions')->group(function () 
 Route::get('/employees/{id}/salary-details', [App\Http\Controllers\EmployeeController::class, 'getSalaryDetails']);
 // Route::get('/employees/{id}/no-pay/{month}', [App\Http\Controllers\PayrollController::class, 'getNoPayLeave']);
 
+Route::get('/get-loan/{employeeId}', [LoanController::class, 'getEmployeeLoan']);
+
+
 
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\Leave;
+use App\Models\Loan;
 use App\Models\Deduction;
 use App\Models\Allowance;
 use Illuminate\Http\Request;
@@ -24,6 +25,14 @@ class PayrollController extends Controller
 
     public function store(Request $request)
 {
+    $employeeId = $request->employee_id; 
+
+    $loan = Loan::where('employee_id', $employeeId)->where('status', 'approved')->first();
+if ($loan) {
+    $newBalance = max(0, $loan->remaining_balance - $request->loan_payment);
+    $loan->update(['remaining_balance' => $newBalance]);
+}
+
     // Validate the input data
     $validator = Validator::make($request->all(), [
         'employee_id' => 'required|exists:employees,id',

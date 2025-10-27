@@ -72,11 +72,11 @@
                 <div class="w-full  flex justify-between items-center space-x-48 px-16">
                   <div class="w-full">
     <label for="employee_id" class="block text-xl text-black font-bold">Employee ID :</label>
-    <select id="employee_id" name="employee_id"
+    <select id="employee_id" name="employee_id" onchange="fetchLoanDetails(this.value)"
         class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl combobox">
         <option value="">Select or type Employee ID</option>
         @foreach($employees as $employee)
-            <option value="{{ $employee->id }}">{{ $employee->employee_id }} </option>
+            <option value="{{ $employee->id }}">{{ $employee->employee_id }} - {{ $employee->full_name }} </option>
         @endforeach
     </select>
 </div>
@@ -204,10 +204,12 @@
                             <label for="advance_payment" class="block text-xl text-black font-bold">Advance Payment :</label>
                             <input type="number" id="advance_payment" name="advance_payment" placeholder="Enter Advance Payment" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalDeductions()" />
                         </div>
-                        <div>
-                            <label for="loan_payment" class="block text-xl text-black font-bold">Loan Payment :</label>
-                            <input type="number" id="loan_payment" name="loan_payment" placeholder="Enter Loan Payment" class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 text-xl" oninput="calculateTotalDeductions()" />
-                        </div>
+                        <label for="advance_payment" class="block text-xl text-black font-bold">Loan Payment :</label>
+                        <input type="number" id="loan_payment" name="loan_payment" readonly
+                        class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] font-bold rounded-xl text-xl bg-gray-100" />
+                        <p id="remaining_balance_display" class="mt-2 text-lg text-gray-700 font-semibold"></p>
+
+
                     </div>
                 </div>     
                    <div>
@@ -336,6 +338,29 @@
             $('#full_name, #basic, #budget_allowance, #transport_allowance, #attendance_allowance, #phone_allowance, #car_allowance, #production_bonus, #gross_salary').val('');
         }
     });
+
+
+
+
+    function fetchLoanDetails(employeeId) {
+    if (!employeeId) {
+        document.getElementById('loan_payment').value = data.monthly_paid || 0;
+document.getElementById('remaining_balance_display').innerText = 
+    `Remaining Balance: Rs. ${data.remaining_balance}`;
+
+        return;
+    }
+
+    fetch(`/get-loan/${employeeId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loan_payment').value = data.monthly_paid || 0;
+            document.getElementById('remaining_balance_display').innerText = 
+                `Remaining Balance: Rs. ${data.remaining_balance}`;
+            calculateTotalDeductions(); // optional if you recalculate totals
+        })
+        .catch(error => console.error('Error fetching loan details:', error));
+}
 
 // $('#monthSelector').on('change', function () {
 //     let month = $(this).val(); // Get the selected month
