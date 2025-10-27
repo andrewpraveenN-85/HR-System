@@ -152,12 +152,23 @@ class ServerTest {
      * Integration test: process punch data and send to API
      */
     public function testProcessPunchData() {
+        // kept for backward compatibility
+        $this->testProcessPunchDataWith(null);
+    }
+
+    /**
+     * Integration test: process punch data and send to API
+     * Accept optional employeeData to run non-interactively.
+     */
+    public function testProcessPunchDataWith($employeeData = null) {
         echo "\n" . str_repeat("=", 50) . "\n";
         echo "=== Integration Test: API Data Submission ===\n";
         echo str_repeat("=", 50) . "\n";
         
-        // Get employee data from user input
-        $employeeData = $this->getEmployeeIdsFromUser();
+        // Get employee data from user input if not provided
+        if ($employeeData === null) {
+            $employeeData = $this->getEmployeeIdsFromUser();
+        }
         
         // Generate dummy test data for specified employees
         $dummyData = $this->generateDummyPunchData($employeeData);
@@ -270,86 +281,225 @@ class ServerTest {
         
         echo "Attendance Test Data Setup:\n";
         echo "---------------------------\n";
-        echo "1. Manual entry (specify employees and times)\n";
-        echo "2. Quick test with default data\n\n";
+    echo "1. Manual entry (specify employees and times)\n";
+    echo "2. Quick test with default data\n";
+    echo "3. Load test data from JSON file (attendance_tests.json)\n\n";
         
-        echo "Choose option (1/2): ";
-        $handle = fopen("php://stdin", "r");
-        $choice = trim(fgets($handle));
+    echo "Choose option (1/2/3): ";
+    $handle = fopen("php://stdin", "r");
+    $choice = trim(fgets($handle));
         
-        if ($choice == '1') {
+    if ($choice == '1') {
             echo "\nHow many employees do you want to test? ";
             $empCount = (int)trim(fgets($handle));
-            
+
             for ($i = 1; $i <= $empCount; $i++) {
                 echo "\n--- Employee $i ---\n";
                 echo "Employee ID: ";
                 $empId = trim(fgets($handle));
-                
+
                 if (empty($empId)) {
                     echo "Empty employee ID, skipping...\n";
                     continue;
                 }
-                
-                echo "Attendance Time:\n";
+
+                // Collect IN time (supports combined IN-OUT like "08:30-17:30" or "YYYY-MM-DD 08:30-17:30")
+                echo "\nIN Time options:\n";
                 echo "1. Current time (" . date('Y-m-d H:i:s') . ")\n";
-                echo "2. Morning (08:30:00)\n";
-                echo "3. Evening (17:30:00)\n";
-                echo "4. Custom time\n";
-                echo "Choose (1-4): ";
-                $timeChoice = trim(fgets($handle));
-                
-                switch ($timeChoice) {
+                echo "2. Morning (08:30- )\n";
+                echo "3. Custom IN or combined IN-OUT (e.g., '08:30-17:30' or '2025-10-23 08:30-17:30')\n";
+                echo "Choose IN time (1-3): ";
+                $inChoice = trim(fgets($handle));
+
+                $combinedProvided = false;
+                $inTime = '';
+                $outTime = '';
+
+                switch ($inChoice) {
                     case '1':
-                        $attTime = date('Y-m-d H:i:s');
+                        $inTime = date('Y-m-d H:i:s');
                         break;
-                        
                     case '2':
-                        // $attTime = date('Y-m-d 08:30:00');
-                        $attTime = date('2025-10-10 08:30:00');
+                        $inTime = date('Y-m-d') . ' 08:30:00';
                         break;
-                        
                     case '3':
-                        $attTime = date('2025-10-10 17:30:00');
-                        // $attTime = date('Y-m-d 18:30:00');
-                        break;
-                        
-                    case '4':
-                        echo "Enter custom time (YYYY-MM-DD HH:MM:SS) or press Enter for current time: ";
-                        $customTime = trim(fgets($handle));
-                        if (empty($customTime)) {
-                            $attTime = date('Y-m-d H:i:s');
-                        } else {
-                            // Validate time format
-                            if (strtotime($customTime) === false) {
-                                echo "Invalid time format, using current time.\n";
-                                $attTime = date('Y-m-d H:i:s');
+                    default:
+                        echo "Enter custom IN time (YYYY-MM-DD HH:MM or YYYY-MM-DD HH:MM-HH:MM) or combined (HH:MM-HH:MM) : ";
+                        $customIn = trim(fgets($handle));
+
+                        // If user entered combined like 08:30-17:30 or 'YYYY-MM-DD 08:30-17:30'
+                        if (!empty($customIn) && preg_match('/^(?:\d{4}-\d{2}-\d{2} )?\d{1,2}:\d{2}-\d{1,2}:\d{2}$/', $customIn)) {
+                            $combinedProvided = true;
+                            // If date present, split date and times
+                            if (preg_match('/^(\d{4}-\d{2}-\d{2}) (\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/', $customIn, $m)) {
+                                $date = $m[1];
+                                $inTime = $date . ' ' . $m[2] . ':00';
+                                $outTime = $date . ' ' . $m[3] . ':00';
                             } else {
-                                $attTime = $customTime;
+                                // No date, use today's date
+                                if (preg_match('/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/', $customIn, $m2)) {
+                                    $date = date('Y-m-d');
+                                    $inTime = $date . ' ' . $m2[1] . ':00';
+                                    $outTime = $date . ' ' . $m2[2] . ':00';
+                                }
+                            }
+                        } else {
+                            // Single datetime
+                            if (empty($customIn) || strtotime($customIn) === false) {
+                                if (!empty($customIn)) echo "Invalid format, using current time.\n";
+                                $inTime = date('Y-m-d H:i:s');
+                            } else {
+                                // If time only provided (HH:MM), add today's date
+                                if (preg_match('/^\d{1,2}:\d{2}$/', $customIn)) {
+                                    $inTime = date('Y-m-d') . ' ' . $customIn . ':00';
+                                } else {
+                                    $inTime = $customIn;
+                                }
                             }
                         }
                         break;
-                        
-                    default:
-                        // Default to current time
-                        $attTime = date('Y-m-d H:i:s');
-                        break;
                 }
-                
-                $employeeData[] = ['id' => $empId, 'time' => $attTime];
+
+                // Collect OUT time only if a combined time wasn't already provided
+                if (!$combinedProvided) {
+                    echo "\nOUT Time options:\n";
+                    echo "1. Current time (" . date('Y-m-d H:i:s') . ")\n";
+                    echo "2. Evening (17:30:00)\n";
+                    echo "3. Custom OUT time\n";
+                    echo "Choose OUT time (1-3): ";
+                    $outChoice = trim(fgets($handle));
+
+                    switch ($outChoice) {
+                        case '1':
+                            $outTime = date('Y-m-d H:i:s');
+                            break;
+                        case '2':
+                            $outTime = date('Y-m-d') . ' 17:30:00';
+                            break;
+                        case '3':
+                        default:
+                            echo "Enter custom OUT time (YYYY-MM-DD HH:MM:SS) or press Enter for current time: ";
+      
+                            $customOut = trim(fgets($handle));
+                            if (empty($customOut) || strtotime($customOut) === false) {
+                                if (!empty($customOut)) echo "Invalid format, using current time.\n";
+                                $outTime = date('Y-m-d H:i:s');
+                            } else {
+                                $outTime = $customOut;
+                            }
+                            break;
+                    }
+                }
+
+                $employeeData[] = ['id' => $empId, 'in' => $inTime, 'out' => $outTime];
+            }
+        }
+
+        // Option 3: load from JSON file
+        if ($choice == '3') {
+            $defaultPath = __DIR__ . DIRECTORY_SEPARATOR . 'attendance_tests.json';
+            echo "\nEnter path to JSON file or press Enter to use: $defaultPath\n";
+            echo "Path: ";
+            $filePath = trim(fgets($handle));
+            if (empty($filePath)) $filePath = $defaultPath;
+
+            if (!file_exists($filePath)) {
+                echo "File not found: $filePath\n";
+            } else {
+                $raw = file_get_contents($filePath);
+                $json = json_decode($raw, true);
+                $employees = [];
+
+                if (is_array($json) && isset($json['item'])) {
+                    foreach ($json['item'] as $item) {
+                        // Only consider POST items with a body
+                        $method = $item['request']['method'] ?? '';
+                        if (strtoupper($method) !== 'POST') continue;
+                        $bodyRaw = $item['request']['body']['raw'] ?? null;
+                        if (empty($bodyRaw)) continue;
+
+                        $body = json_decode($bodyRaw, true);
+                        if ($body === null) {
+                            // try to clean raw (sometimes escaped)
+                            $bodyStr = trim($bodyRaw);
+                            // attempt to remove leading/trailing quotes
+                            if ((substr($bodyStr,0,1) === '"' && substr($bodyStr,-1) === '"') || (substr($bodyStr,0,1) === "'" && substr($bodyStr,-1) === "'")) {
+                                $bodyStr = substr($bodyStr,1,-1);
+                            }
+                            $body = json_decode($bodyStr, true);
+                        }
+
+                        if (is_array($body)) {
+                            // body can be array of entries or single entry
+                            $entries = array_values($body);
+                            foreach ($entries as $entry) {
+                                if (!is_array($entry)) continue;
+                                $id = $entry['EmpId'] ?? $entry['userId'] ?? $entry['userI'] ?? $entry['id'] ?? null;
+                                if ($id === null) continue;
+                                $date = $entry['date'] ?? date('Y-m-d');
+
+                                // time can be in different fields
+                                if (isset($entry['timeType']) && isset($entry['time'])) {
+                                    $time = $entry['time'];
+                                    // normalize time to full datetime
+                                    if (preg_match('/^\d{2}:\d{2}$/', $time)) {
+                                        $ts = $date . ' ' . $time . ':00';
+                                    } else {
+                                        $ts = $time;
+                                    }
+
+                                    if (!isset($employees[$id])) $employees[$id] = ['id' => $id, 'in' => '', 'out' => ''];
+                                    $tt = strtolower($entry['timeType']);
+                                    if (strpos($tt, 'morning') !== false || strpos($tt, 'in') !== false) {
+                                        $employees[$id]['in'] = $ts;
+                                    } elseif (strpos($tt, 'evening') !== false || strpos($tt, 'out') !== false) {
+                                        $employees[$id]['out'] = $ts;
+                                    } else {
+                                        // fallback: set in if empty, else out
+                                        if (empty($employees[$id]['in'])) $employees[$id]['in'] = $ts; else $employees[$id]['out'] = $ts;
+                                    }
+                                } elseif (isset($entry['inTime']) || isset($entry['outTime'])) {
+                                    if (!isset($employees[$id])) $employees[$id] = ['id' => $id, 'in' => '', 'out' => ''];
+                                    if (isset($entry['inTime'])) $employees[$id]['in'] = $entry['inTime'];
+                                    if (isset($entry['outTime'])) $employees[$id]['out'] = $entry['outTime'];
+                                } elseif (isset($entry['time'])) {
+                                    // single time entries: append as in if empty else out
+                                    $time = $entry['time'];
+                                    if (preg_match('/^\d{2}:\d{2}$/', $time)) $ts = $date . ' ' . $time . ':00'; else $ts = $time;
+                                    if (!isset($employees[$id])) $employees[$id] = ['id' => $id, 'in' => '', 'out' => ''];
+                                    if (empty($employees[$id]['in'])) $employees[$id]['in'] = $ts; else $employees[$id]['out'] = $ts;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // convert to expected employeeData format
+                if (!empty($employees)) {
+                    $employeeData = array_values($employees);
+                    echo "Loaded " . count($employeeData) . " employees from $filePath\n";
+                    // show a compact preview
+                    foreach ($employeeData as $ed) {
+                        $in = $ed['in'] ?? '';
+                        $out = $ed['out'] ?? '';
+                        echo "  - {$ed['id']} IN: {$in} OUT: {$out}\n";
+                    }
+                } else {
+                    echo "No suitable attendance entries found in $filePath\n";
+                }
             }
         }
         
         // If no employee data was provided or option 2 was chosen, use default test data
         if (empty($employeeData) || $choice == '2') {
             $now = date('Y-m-d H:i:s');
-            $morning = date('Y-m-d 08:30:00');
-            $evening = date('Y-m-d 17:30:00');
-            
+            $morning = date('Y-m-d') . ' 08:30:00';
+            $evening = date('Y-m-d') . ' 17:30:00';
+
             $employeeData = [
-                ['id' => 'TEST001', 'time' => $morning],
-                ['id' => 'TEST002', 'time' => $now],
-                ['id' => 'TEST003', 'time' => $evening]
+                ['id' => 'TEST001', 'in' => $morning, 'out' => $evening],
+                ['id' => 'TEST002', 'in' => $morning, 'out' => $now],
+                ['id' => 'TEST003', 'in' => $now, 'out' => $evening]
             ];
             echo "\nUsing default test data:\n";
         } else {
@@ -359,7 +509,11 @@ class ServerTest {
         // Display the test data
         echo "-------------------------\n";
         foreach ($employeeData as $data) {
-            echo "Employee: {$data['id']} | Time: {$data['time']}\n";
+            $in = isset($data['in']) ? $data['in'] : (isset($data['time']) ? $data['time'] : '');
+            $out = isset($data['out']) ? $data['out'] : '';
+            echo "Employee: {$data['id']} | IN: {$in}";
+            if (!empty($out)) echo " | OUT: {$out}";
+            echo "\n";
         }
         echo "\n";
         
@@ -372,14 +526,86 @@ class ServerTest {
      */
     private function generateDummyPunchData($employeeData = []) {
         $punchEntries = [];
-        
         foreach ($employeeData as $data) {
             $empId = $data['id'];
-            $timestamp = $data['time'];
-            $punchEntries[] = "EmpId=$empId,AttTime=$timestamp";
+            // If the entry has separate in/out times, create two punch entries
+            if (isset($data['in'])) {
+                $punchEntries[] = "EmpId=$empId,AttTime={$data['in']}";
+            }
+            if (isset($data['out'])) {
+                $punchEntries[] = "EmpId=$empId,AttTime={$data['out']}";
+            }
+            // Backwards compatibility: single 'time' field
+            if (!isset($data['in']) && !isset($data['out']) && isset($data['time'])) {
+                $punchEntries[] = "EmpId=$empId,AttTime={$data['time']}";
+            }
         }
-        
+
         return implode("\n", $punchEntries);
+    }
+
+    /**
+     * Load employee in/out data from a Postman-style collection JSON file.
+     * Returns array of ['id'=>..., 'in'=>..., 'out'=>...] or empty array.
+     */
+    public function loadEmployeeDataFromJsonFile($filePath) {
+        if (!file_exists($filePath)) return [];
+        $raw = file_get_contents($filePath);
+        $json = json_decode($raw, true);
+        $employees = [];
+
+        if (is_array($json) && isset($json['item'])) {
+            foreach ($json['item'] as $item) {
+                $method = $item['request']['method'] ?? '';
+                if (strtoupper($method) !== 'POST') continue;
+                $bodyRaw = $item['request']['body']['raw'] ?? null;
+                if (empty($bodyRaw)) continue;
+
+                $body = json_decode($bodyRaw, true);
+                if ($body === null) {
+                    $bodyStr = trim($bodyRaw);
+                    if ((substr($bodyStr,0,1) === '"' && substr($bodyStr,-1) === '"') || (substr($bodyStr,0,1) === "'" && substr($bodyStr,-1) === "'")) {
+                        $bodyStr = substr($bodyStr,1,-1);
+                    }
+                    $body = json_decode($bodyStr, true);
+                }
+
+                if (is_array($body)) {
+                    $entries = array_values($body);
+                    foreach ($entries as $entry) {
+                        if (!is_array($entry)) continue;
+                        $id = $entry['EmpId'] ?? $entry['userId'] ?? $entry['userI'] ?? $entry['id'] ?? null;
+                        if ($id === null) continue;
+                        $date = $entry['date'] ?? date('Y-m-d');
+
+                        if (isset($entry['timeType']) && isset($entry['time'])) {
+                            $time = $entry['time'];
+                            if (preg_match('/^\d{2}:\d{2}$/', $time)) $ts = $date . ' ' . $time . ':00'; else $ts = $time;
+                            if (!isset($employees[$id])) $employees[$id] = ['id' => $id, 'in' => '', 'out' => ''];
+                            $tt = strtolower($entry['timeType']);
+                            if (strpos($tt, 'morning') !== false || strpos($tt, 'in') !== false) {
+                                $employees[$id]['in'] = $ts;
+                            } elseif (strpos($tt, 'evening') !== false || strpos($tt, 'out') !== false) {
+                                $employees[$id]['out'] = $ts;
+                            } else {
+                                if (empty($employees[$id]['in'])) $employees[$id]['in'] = $ts; else $employees[$id]['out'] = $ts;
+                            }
+                        } elseif (isset($entry['inTime']) || isset($entry['outTime'])) {
+                            if (!isset($employees[$id])) $employees[$id] = ['id' => $id, 'in' => '', 'out' => ''];
+                            if (isset($entry['inTime'])) $employees[$id]['in'] = $entry['inTime'];
+                            if (isset($entry['outTime'])) $employees[$id]['out'] = $entry['outTime'];
+                        } elseif (isset($entry['time'])) {
+                            $time = $entry['time'];
+                            if (preg_match('/^\d{2}:\d{2}$/', $time)) $ts = $date . ' ' . $time . ':00'; else $ts = $time;
+                            if (!isset($employees[$id])) $employees[$id] = ['id' => $id, 'in' => '', 'out' => ''];
+                            if (empty($employees[$id]['in'])) $employees[$id]['in'] = $ts; else $employees[$id]['out'] = $ts;
+                        }
+                    }
+                }
+            }
+        }
+
+        return array_values($employees);
     }
 
     /**
@@ -396,32 +622,72 @@ class ServerTest {
      */
     private function createQuickTestData() {
         return [
-            ['id' => 'QUICK001', 'time' => date('Y-m-d H:i:s')]
+            ['id' => 'QUICK001', 'in' => date('Y-m-d') . ' 09:00:00', 'out' => date('Y-m-d') . ' 17:00:00']
         ];
     }
 }
 
 // Check if this script is being run directly
 if (php_sapi_name() === 'cli') {
+    $opts = getopt('', ['file:', 'stdin']);
+    $tester = new ServerTest();
+
+    // If --stdin is provided, read JSON from STDIN and parse
+    if (isset($opts['stdin'])) {
+        $stdin = stream_get_contents(STDIN);
+        $data = json_decode($stdin, true);
+        if (is_array($data)) {
+            $employees = $tester->loadEmployeeDataFromJsonFile('');
+            // if loadEmployeeDataFromJsonFile can't handle empty, try parse directly
+            if (empty($employees)) {
+                // expect same format as attendance_tests.json (top-level 'item')
+                if (isset($data['item'])) {
+                    // write to temp file and reuse loader
+                    $tmp = tempnam(sys_get_temp_dir(), 'at_') . '.json';
+                    file_put_contents($tmp, json_encode($data));
+                    $employees = $tester->loadEmployeeDataFromJsonFile($tmp);
+                    unlink($tmp);
+                }
+            }
+
+            if (!empty($employees)) {
+                $tester->testProcessPunchDataWith($employees);
+                exit(0);
+            }
+        }
+    }
+
+    // If --file is provided, load that JSON and run non-interactively
+    if (isset($opts['file'])) {
+        $filePath = $opts['file'];
+        $employees = $tester->loadEmployeeDataFromJsonFile($filePath);
+        if (!empty($employees)) {
+            $tester->testProcessPunchDataWith($employees);
+            exit(0);
+        } else {
+            echo "No employee data found in $filePath\n";
+            exit(1);
+        }
+    }
+
+    // Fallback to interactive mode
     echo "Attendance Server Test Script\n";
     echo "============================\n\n";
     echo "Choose test mode:\n";
     echo "1. Run all tests (unit + integration)\n";
     echo "2. Run API test only (quick test)\n\n";
     echo "Enter choice (1/2): ";
-    
+
     $handle = fopen("php://stdin", "r");
     $choice = trim(fgets($handle));
     fclose($handle);
-    
-    $tester = new ServerTest();
-    
+
     if ($choice == '2') {
         $tester->runAPITestOnly();
     } else {
         $tester->runAllTests();
     }
-    
+
     echo "\nTest script completed. Press any key to exit...\n";
     fread(STDIN, 1);
 }
