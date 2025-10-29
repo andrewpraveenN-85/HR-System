@@ -5,6 +5,7 @@ use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\Leave;
 use App\Models\Loan;
+use App\Models\Advance;
 use App\Models\Deduction;
 use App\Models\Allowance;
 use Illuminate\Http\Request;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Log;
 use App\Models\SalaryDetails;
 use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
-
 
 class PayrollController extends Controller
 {
@@ -65,6 +65,16 @@ if ($loan) {
     }
 
     try {
+        
+    $employeeId = $request->employee_id;
+    $month = $request->payed_month;
+
+    // Get approved advance(s) for this month
+    $advancePayment = Advance::where('employment_ID', $employeeId)
+    ->where('status', 'approved')
+    ->whereYear('advance_date', date('Y', strtotime($month)))
+    ->whereMonth('advance_date', date('m', strtotime($month)))
+    ->sum('advance_amount');
         $employeeId = $request->employee_id;
         $month = $request->payed_month;
 
@@ -85,7 +95,7 @@ if ($loan) {
         // ✅ Calculate total deductions
         $totalDeductions = (
             ($request->epf_8_percent ?? 0) +
-            ($request->advance_payment ?? 0) +
+             $advancePayment +
             ($request->loan_payment ?? 0) +
             $stampDuty +
             $noPayDeductions
@@ -253,6 +263,7 @@ if ($loan) {
         // Return the edit form view with the record
         return view('management.payroll.payroll-edit', compact('record'));
     }
+
 
     // Display the card view for payroll records
     public function index()
