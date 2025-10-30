@@ -15,15 +15,18 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Exports\BankDetailsExport;
 use App\Services\OvertimeCalculator;
+use App\Services\LeaveBalanceService;
 
 
 class PayrollExportController extends Controller
 {
     private OvertimeCalculator $overtimeCalculator;
+    private LeaveBalanceService $leaveBalanceService;
 
-    public function __construct(OvertimeCalculator $overtimeCalculator)
+    public function __construct(OvertimeCalculator $overtimeCalculator, LeaveBalanceService $leaveBalanceService)
     {
         $this->overtimeCalculator = $overtimeCalculator;
+        $this->leaveBalanceService = $leaveBalanceService;
     }
 
     public function export(Request $request)
@@ -119,11 +122,27 @@ foreach ($employees as $employee) {
             continue;
         }
 
-        // Calculate leave-based no-pay deductions
-        $leaveNoPayAmount = Leave::where('employee_id', $employee->id)
-            ->where('is_no_pay', true)
-            ->whereBetween('start_date', [$startDate, $endDate])
-            ->sum('no_pay_amount');
+        /**
+         * ========== ANNUAL LEAVE-BASED NO-PAY CALCULATION ==========
+         * 
+         * The no-pay amount is calculated based on annual leave balance instead of monthly limits:
+         * - Annual Leave: 21 days per year (includes full-day and half-day leaves)
+         * - Short Leave: 36 short leaves per year (each = 1/4 day)
+         * 
+         * No-pay is triggered when:
+         * 1. An employee exhausts their annual 21-day leave balance
+         * 2. An employee exhausts their 36 short leaves balance
+         * 
+         * The calculation considers all leaves taken from the leave_year_start date
+         * to determine if the current period's leaves exceed the annual balance.
+         * 
+         * Monthly limits are no longer used for no-pay calculation.
+         */
+        $leaveNoPayAmount = $this->leaveBalanceService->calculateNoPayForPeriod(
+            $employee->id,
+            $startDate,
+            $endDate
+        );
 
         // ========== Get approved loans for this employee ==========
         $approvedLoans = DB::table('loans')

@@ -14,15 +14,18 @@ use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Services\OvertimeCalculator;
+use App\Services\LeaveBalanceService;
 
 
 class PayrollController extends Controller
 {
     private OvertimeCalculator $overtimeCalculator;
+    private LeaveBalanceService $leaveBalanceService;
 
-    public function __construct(OvertimeCalculator $overtimeCalculator)
+    public function __construct(OvertimeCalculator $overtimeCalculator, LeaveBalanceService $leaveBalanceService)
     {
         $this->overtimeCalculator = $overtimeCalculator;
+        $this->leaveBalanceService = $leaveBalanceService;
     }
 
     public function create()
@@ -482,15 +485,20 @@ public function getNoPayLeave($id,$month)
     $startDate = date('Y-m-05', strtotime($month));
     $endDate = date('Y-m-05', strtotime('+1 month', strtotime($month)));
     
-    // Calculate leave-based no-pay deductions
-    $leaveNoPayAmount = Leave::where('employee_id', $id)
-        ->where('is_no_pay', true)
-        ->whereBetween('start_date', [$startDate, $endDate])
-        ->sum('no_pay_amount');
+    // Calculate leave-based no-pay deductions using annual balance
+    // This considers the full annual leave (21 days) and short leave (36) balance
+    $leaveNoPayAmount = $this->leaveBalanceService->calculateNoPayForPeriod(
+        $id,
+        $startDate,
+        $endDate
+    );
+
+    // Also return leave balance information
+    $balances = $this->leaveBalanceService->getLeaveBalances($id);
 
     return response()->json([
-        'no_pay_amount' => $leaveNoPayAmount
-
+        'no_pay_amount' => $leaveNoPayAmount,
+        'leave_balances' => $balances
     ]);
 
 }

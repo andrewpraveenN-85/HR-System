@@ -135,15 +135,46 @@ class Employee extends Model
     }
 
     /**
-     * Get remaining leave balances
+     * Get remaining leave balances based on annual allocation
      */
     public function getLeaveBalances()
     {
-        $this->checkMonthlyReset();
+        $this->checkMonthlyReset(); // Keep for potential future monthly tracking
         
+        $leaveYearStart = $this->leave_year_start 
+            ? Carbon::parse($this->leave_year_start) 
+            : Carbon::parse($this->employment_start_date ?? '2024-01-01');
+
+        // Annual allocations
+        $annualLeaveTotal = 21; // 21 days per year
+        $shortLeaveTotal = 36;  // 36 short leaves per year
+
+        // Calculate leaves used from the start of the leave year
+        $leavesUsedInYear = Leave::where('employee_id', $this->id)
+            ->where('status', 'approved')
+            ->where('start_date', '>=', $leaveYearStart)
+            ->get();
+
+        $annualDaysUsed = 0;
+        $shortLeavesUsed = 0;
+
+        foreach ($leavesUsedInYear as $leave) {
+            if ($leave->leave_category === 'short_leave') {
+                $shortLeavesUsed += $leave->duration;
+            } else {
+                // Full day or half day leaves count towards annual leave
+                $annualDaysUsed += $leave->duration;
+            }
+        }
+
         return [
-            'annual_leaves_remaining' => $this->annual_leave_balance - $this->annual_leave_used,
-            'short_leaves_remaining' => $this->short_leave_balance - $this->short_leave_used,
+            'annual_leaves_remaining' => max(0, $annualLeaveTotal - $annualDaysUsed),
+            'short_leaves_remaining' => max(0, $shortLeaveTotal - $shortLeavesUsed),
+            'annual_leaves_used' => $annualDaysUsed,
+            'short_leaves_used' => $shortLeavesUsed,
+            'annual_leave_total' => $annualLeaveTotal,
+            'short_leave_total' => $shortLeaveTotal,
+            // Keep monthly tracking for display purposes if needed
             'monthly_leaves_remaining' => 2 - $this->monthly_leaves_used,
             'monthly_half_leaves_remaining' => 1 - $this->monthly_half_leaves_used,
             'monthly_short_leaves_remaining' => 3 - $this->monthly_short_leaves_used
@@ -151,25 +182,60 @@ class Employee extends Model
     }
 
     /**
-     * Calculate no-pay amount for excess leaves
+     * Calculate no-pay amount for excess leaves based on annual balance
+     * This considers the full annual leave (21 days) and short leave (36) allocation
      */
     public function calculateNoPayAmount($leaveType, $duration)
     {
-        $balances = $this->getLeaveBalances();
+        $leaveYearStart = $this->leave_year_start 
+            ? Carbon::parse($this->leave_year_start) 
+            : Carbon::parse($this->employment_start_date ?? '2024-01-01');
+
+        // Annual allocations
+        $annualLeaveTotal = 21; // 21 days per year
+        $shortLeaveTotal = 36;  // 36 short leaves per year
+
+        // Calculate leaves used from the start of the leave year
+        $leavesUsedInYear = Leave::where('employee_id', $this->id)
+            ->where('status', 'approved')
+            ->where('start_date', '>=', $leaveYearStart)
+            ->get();
+
+        $annualDaysUsed = 0;
+        $shortLeavesUsed = 0;
+
+        foreach ($leavesUsedInYear as $leave) {
+            if ($leave->leave_category === 'short_leave') {
+                $shortLeavesUsed += $leave->duration;
+            } else {
+                // Full day or half day leaves count towards annual leave
+                $annualDaysUsed += $leave->duration;
+            }
+        }
+
+        // Calculate remaining balances
+        $annualLeaveRemaining = max(0, $annualLeaveTotal - $annualDaysUsed);
+        $shortLeaveRemaining = max(0, $shortLeaveTotal - $shortLeavesUsed);
+
         $dailyRate = $this->getDailyRate();
         
+        // Calculate no-pay based on remaining annual balance
         switch ($leaveType) {
             case 'full_day':
-                $available = min($balances['annual_leaves_remaining'], $balances['monthly_leaves_remaining']);
-                return max(0, ($duration - $available) * $dailyRate);
-                
             case 'half_day':
-                $available = min($balances['annual_leaves_remaining'] * 2, $balances['monthly_half_leaves_remaining']);
-                return max(0, ($duration - $available) * ($dailyRate / 2));
+                if ($duration > $annualLeaveRemaining) {
+                    $excessDays = $duration - $annualLeaveRemaining;
+                    return $excessDays * $dailyRate;
+                }
+                return 0;
                 
             case 'short_leave':
-                $available = min($balances['short_leaves_remaining'], $balances['monthly_short_leaves_remaining']);
-                return max(0, ($duration - $available) * ($dailyRate / 4));
+                if ($duration > $shortLeaveRemaining) {
+                    $excessShortLeaves = $duration - $shortLeaveRemaining;
+                    // Each short leave is 1/4 of a day
+                    return ($excessShortLeaves / 4) * $dailyRate;
+                }
+                return 0;
         }
         
         return 0;
