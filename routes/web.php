@@ -251,6 +251,8 @@ Route::get('/employees/{id}/salary-details', [App\Http\Controllers\EmployeeContr
 
 Route::get('/get-loan/{employeeId}', [LoanController::class, 'getEmployeeLoan']);
 
+Route::get('/calculate-no-pay', [LeaveController::class, 'calculateMonthlyNoPay'])->name('calculate.no.pay');
+
 
 
 

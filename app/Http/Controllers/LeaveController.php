@@ -45,6 +45,82 @@ class LeaveController extends Controller
 
 public function store(Request $request)
 {  
+
+   // Validate the input
+    $validated = $request->validate([
+        'employment_ID' => 'required|string|max:255',
+        'leave_type' => 'required|string|max:255',
+        'leave_category' => 'required|in:full_day,half_day,short_leave',
+        'half_day_type' => 'nullable|in:morning,evening',
+        'short_leave_type' => 'nullable|in:morning,evening',
+        'start_date' => 'required|date',
+        'end_date' => 'required|date|after_or_equal:start_date',
+        'start_time' => 'nullable|date_format:H:i',
+        'end_time' => 'nullable|date_format:H:i',
+        'approved_person' => 'required|string|max:255',
+        'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
+        'description' => 'nullable|string',
+        'supporting_documents' => 'nullable|array',
+    ]);
+
+    // Get the employee
+    $employee = Employee::where('employee_id', $validated['employment_ID'])->first();
+    if (!$employee) {
+        return back()->withErrors(['employment_ID' => 'Invalid Employee ID'])->withInput();
+    }
+
+    // Calculate leave duration
+    $duration = $this->calculateLeaveDuration($validated);
+
+    // Calculate no-pay amount
+    $noPayAmount = $employee->calculateNoPayAmount($validated['leave_category'], $duration);
+    $isNoPay = $noPayAmount > 0;
+
+    // Handle file uploads
+    $uploadedFiles = [];
+    if ($request->hasFile('supporting_documents')) {
+        foreach ($request->file('supporting_documents') as $file) {
+            $filePath = $file->storeAs(
+                'leave-documents',
+                time() . '_' . $file->getClientOriginalName(),
+                'public'
+            );
+            $uploadedFiles[] = $filePath;
+        }
+    }
+
+    // Create leave record manually
+    $leave = new Leave();
+    $leave->employee_id = $employee->id;                 // REQUIRED
+    $leave->employee_name = $employee->full_name;
+    $leave->employment_ID = $validated['employment_ID'];
+    $leave->leave_type = $validated['leave_type'];
+    $leave->leave_category = $validated['leave_category'];
+    $leave->half_day_type = $validated['half_day_type'] ?? null;
+    $leave->short_leave_type = $validated['short_leave_type'] ?? null;
+    $leave->approved_person = $validated['approved_person'];
+    $leave->start_date = $validated['start_date'];
+    $leave->end_date = $validated['end_date'];
+    $leave->start_time = $validated['start_time'] ?? null;
+    $leave->end_time = $validated['end_time'] ?? null;
+    $leave->duration = $duration;
+    $leave->status = $validated['status'];
+    $leave->description = $validated['description'] ?? null;
+    $leave->is_no_pay = $isNoPay;
+    $leave->no_pay_amount = $noPayAmount;
+    $leave->supporting_documents = !empty($uploadedFiles) ? json_encode($uploadedFiles) : null;
+
+    $leave->save();
+
+
+    // ✅ If the leave is approved, check if it's no-pay
+    if ($leave->status === 'approved') {
+        $leave->updateEmployeeBalances();
+        $this->calculateNoPayForLeave($leave);
+    }
+
+    return redirect()->back()->with('success', 'Leave submitted successfully.');
+
     try {
         $validated = $request->validate([
             'employment_ID' => 'required|string|max:255',
@@ -126,6 +202,46 @@ public function store(Request $request)
         return redirect()->route('leave.management')->with('success', 'Leave added successfully.');
 }
     
+
+public function calculateMonthlyNoPay()
+{
+    $employees = Employee::all();
+    $currentYear = now()->year;
+
+    foreach ($employees as $employee) {
+        // Get total leave days taken this year
+        $totalLeaveDays = Leave::where('employment_ID', $employee->employment_ID)
+            ->whereYear('leave_date', $currentYear)
+            ->sum('no_of_days');
+
+        // Check if they exceeded 21 annual leave days
+        $excessLeaveDays = max(0, $totalLeaveDays - 21);
+
+        // Calculate no pay amount if exceeded
+        if ($excessLeaveDays > 0) {
+            $dailySalary = $employee->basic_salary / 30;
+            $noPayAmount = $excessLeaveDays * $dailySalary;
+
+            // Update or create in leaves table (example column: no_pay_amount)
+            Leave::updateOrCreate(
+                [
+                    'employment_ID' => $employee->employment_ID,
+                    'leave_type' => 'No Pay',
+                    'leave_month' => now()->month,
+                    'leave_year' => $currentYear
+                ],
+                [
+                    'no_of_days' => $excessLeaveDays,
+                    'no_pay_amount' => $noPayAmount,
+                    'status' => 'approved'
+                ]
+            );
+        }
+    }
+
+    return response()->json(['message' => 'Monthly No Pay calculated successfully.']);
+}
+
 
      // Display details of a specific payroll record
     public function show($id)
@@ -227,8 +343,9 @@ public function store(Request $request)
         
         // Update employee balances if status changed to approved
         if ($oldStatus !== 'approved' && $request->status === 'approved') {
-            $leave->updateEmployeeBalances();
-        }
+         $leave->updateEmployeeBalances();
+         $this->calculateNoPayForLeave($leave);
+}
         
         return redirect()->route('leave.management')->with('success', 'Leave updated successfully.');
 
@@ -329,4 +446,54 @@ public function store(Request $request)
             }
         }
     }
+    /**
+ * Check and calculate No Pay Leave
+ */
+private function calculateNoPayForLeave(Leave $leave)
+{
+    $employee = $leave->employee;
+    if (!$employee) return;
+
+    // Define your leave year: March 6 to April 5
+    $currentYear = now()->year;
+    $yearStart = Carbon::parse("1 January $currentYear");
+    $yearEnd = Carbon::parse("31 December " . ($currentYear + 1));
+
+    // Adjust if leave is before March 6 (belongs to previous cycle)
+    if (Carbon::parse($leave->start_date)->lt($yearStart)) {
+        $yearStart->subYear();
+        $yearEnd->subYear();
+    }
+
+    // Get total approved full-day and half-day leaves within the year
+    $totalUsedDays = Leave::where('employee_id', $employee->id)
+        ->where('status', 'approved')
+        ->whereIn('leave_category', ['full_day', 'half_day'])
+        ->whereBetween('start_date', [$yearStart, $yearEnd])
+        ->sum('duration');
+
+    // If employee exceeded 21 annual leaves
+    if ($totalUsedDays > 21) {
+        $extraDays = $totalUsedDays - 21;
+
+        // Example: daily rate (change if you have salary field)
+        $dailyRate = $employee->daily_rate ?? 1000;
+
+        // Calculate total no-pay amount
+        $noPayAmount = $extraDays * $dailyRate;
+
+        // Update this leave record
+        $leave->update([
+            'is_no_pay' => true,
+            'no_pay_amount' => $noPayAmount,
+        ]);
+    } else { 
+        // Reset if under limit
+        $leave->update([
+            'is_no_pay' => false,
+            'no_pay_amount' => 0,
+        ]);
+    }
+}
+
 }
