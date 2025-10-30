@@ -250,32 +250,44 @@ Route::get('/employees/{id}/salary-details', [App\Http\Controllers\PayrollContro
 Route::get('/employees/{id}/no-pay/{month}', [App\Http\Controllers\PayrollController::class, 'getNoPayLeave']);
 
 // Debug route for Saturday OT calculation
-// Route::get('/debug/saturday-ot/{employeeId}/{month}', function ($employeeId, $month) {
-//     $employee = \App\Models\Employee::with('department')->findOrFail($employeeId);
-//     $startDate = date('Y-m-05', strtotime($month));
-//     $endDate = date('Y-m-05', strtotime('+1 month', strtotime($month)));
+Route::get('/debug/saturday-ot/{employeeId}/{month}', function ($employeeId, $month) {
+    $employee = \App\Models\Employee::with('department')->findOrFail($employeeId);
+    $startDate = date('Y-m-05', strtotime($month));
+    $endDate = date('Y-m-05', strtotime('+1 month', strtotime($month)));
     
-//     $overtimeCalculator = app(\App\Services\OvertimeCalculator::class);
-//     $result = $overtimeCalculator->calculate($employee, \Carbon\Carbon::parse($startDate), \Carbon\Carbon::parse($endDate));
+    $overtimeCalculator = app(\App\Services\OvertimeCalculator::class);
+    $result = $overtimeCalculator->calculate($employee, \Carbon\Carbon::parse($startDate), \Carbon\Carbon::parse($endDate));
     
-//     return response()->json([
-//         'employee' => $employee->full_name,
-//         'department' => $employee->department->name ?? 'N/A',
-//         'branch' => $employee->department->branch ?? 'N/A',
-//         'period' => "{$startDate} to {$endDate}",
-//         'regular_ot_seconds' => $result['regular_seconds'],
-//         'regular_ot_hours' => $result['regular_seconds'] / 3600,
-//         'sunday_ot_hours' => $result['sunday_seconds'] / 3600,
-//         'head_office_summary' => $result['head_office_summary'] ?? [],
-//         'saturday_assignments' => \App\Models\SaturdayAssignment::where('employee_id', $employeeId)
-//             ->whereBetween('work_date', [$startDate, $endDate])
-//             ->get(),
-//         'saturday_attendance' => \App\Models\Attendance::where('employee_id', $employeeId)
-//             ->whereBetween('date', [$startDate, $endDate])
-//             ->whereRaw('DAYOFWEEK(date) = 7') // Saturday
-//             ->get(),
-//     ]);
-// })->middleware('auth');
+    return response()->json([
+        'employee' => $employee->full_name,
+        'department' => $employee->department->name ?? 'N/A',
+        'branch' => $employee->department->branch ?? 'N/A',
+        'period' => "{$startDate} to {$endDate}",
+        'regular_ot_seconds' => $result['regular_seconds'],
+        'regular_ot_hours' => $result['regular_seconds'] / 3600,
+        'sunday_ot_hours' => $result['sunday_seconds'] / 3600,
+        'head_office_summary' => $result['head_office_summary'] ?? [],
+        'saturday_assignments' => \App\Models\SaturdayAssignment::where('employee_id', $employeeId)
+            ->whereBetween('work_date', [$startDate, $endDate])
+            ->get(),
+        'saturday_attendance' => \App\Models\Attendance::where('employee_id', $employeeId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->whereRaw('DAYOFWEEK(date) = 7') // Saturday
+            ->get(),
+    ]);
+})->middleware('auth');
+
+// Delete payroll records for a specific month (for regeneration)
+Route::delete('/payroll/delete-month/{month}', function ($month) {
+    try {
+        $deleted = \App\Models\SalaryDetails::where('payed_month', $month)->delete();
+        \Log::info("Deleted payroll records", ['month' => $month, 'count' => $deleted]);
+        return redirect()->back()->with('success', "Deleted {$deleted} payroll records for {$month}. You can now regenerate them.");
+    } catch (\Exception $e) {
+        \Log::error("Failed to delete payroll records", ['month' => $month, 'error' => $e->getMessage()]);
+        return redirect()->back()->with('error', 'Failed to delete payroll records: ' . $e->getMessage());
+    }
+})->middleware('auth')->name('payroll.delete-month');
 
 
 
