@@ -13,11 +13,22 @@ use Spatie\SimpleExcel\SimpleExcelWriter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Exports\BankDetailsExport;
+use App\Services\OvertimeCalculator;
+use App\Services\LeaveBalanceService;
 
 
 class PayrollExportController extends Controller
 {
+    private OvertimeCalculator $overtimeCalculator;
+    private LeaveBalanceService $leaveBalanceService;
+
+    public function __construct(OvertimeCalculator $overtimeCalculator, LeaveBalanceService $leaveBalanceService)
+    {
+        $this->overtimeCalculator = $overtimeCalculator;
+        $this->leaveBalanceService = $leaveBalanceService;
+    }
 
     public function export(Request $request)
     {
@@ -77,63 +88,63 @@ class PayrollExportController extends Controller
 public function generatePreviousMonth(Request $request)
 {
     $selectedMonth = $request->query('selected_month');
+
+    if (!$selectedMonth) {
+        return back()->with('error', 'Please select a valid month.');
+    }
+
     $previousMonth = date('Y-m', strtotime('-1 month', strtotime($selectedMonth)));
 
     $payrolls = SalaryDetails::where('payed_month', $previousMonth)->get();
 
-    foreach ($payrolls as $payroll) {
-        // Get attendance records for OT calculation (from 5th of selected month to 5th of next month)
+    if ($payrolls->isEmpty()) {
+        return back()->with('error', 'No payroll records found for the previous month.');
+    }
+
+    $employees = Employee::with('department')->get();
+    if ($employees->isEmpty()) {
+        return back()->with('error', 'No employees found in the system.');
+    }
+
+    foreach ($employees as $employee) {
+
+        // Date range for OT calculation (5th of selected month to 5th of next month)
         $startDate = date('Y-m-05', strtotime($selectedMonth));
         $endDate = date('Y-m-05', strtotime('+1 month', strtotime($selectedMonth)));
 
-        // Define annual leave year cycle (March 6 to next March 5)
-        $currentMonth = Carbon::parse($selectedMonth);
-        $yearStart = Carbon::parse("1 Jan {$currentMonth->year}");
-        $yearEnd = Carbon::parse("31 Dec {$currentMonth->year}");
+        $periodStart = Carbon::parse($startDate);
+        $periodEnd = Carbon::parse($endDate);
 
-        // Get total approved annual leaves for this employee within this cycle
-        $totalAnnualLeavesUsed = Leave::where('employee_id', $payroll->employee_id)
+        // Annual leave year cycle
+        $yearStart = Carbon::parse("1 Jan {$periodStart->year}");
+        $yearEnd = Carbon::parse("31 Dec {$periodStart->year}");
+
+        // Get total approved annual leaves
+        $totalAnnualLeavesUsed = Leave::where('employee_id', $employee->id)
             ->where('status', 'approved')
             ->where('leave_type', 'Annual Leave')
             ->whereIn('leave_category', ['full_day', 'half_day'])
             ->whereBetween('start_date', [$yearStart, $yearEnd])
             ->sum('duration');
 
-        // Calculate no-pay days (beyond 21)
         $noPayDays = max(0, $totalAnnualLeavesUsed - 21);
+        $payroll = $payrolls->firstWhere('employee_id', $employee->id);
 
-        // Daily rate
+        if (!$payroll) continue; // Skip if no payroll found
+
         $dailyRate = $payroll->basic / 30;
+        $leaveNoPayAmount = max(0, $noPayDays * $dailyRate);
 
-        // Total no-pay amount
-        $leaveNoPayAmount = $noPayDays * $dailyRate;
+        // Use LeaveBalanceService for accurate no-pay calculation
+        $leaveNoPayAmount = $this->leaveBalanceService->calculateNoPayForPeriod(
+            $employee->id,
+            $startDate,
+            $endDate
+        );
 
-        // 🔄 Save or update the "No Pay" record in leaves table (REMOVED leave_month / leave_year)
-        if ($noPayDays > 0) {
-            Leave::updateOrCreate(
-                [
-                    'employee_id' => $payroll->employee_id,
-                    'leave_type' => 'No Pay',
-                    'status' => 'approved',
-                ],
-                [
-                    'start_date' => $yearEnd->copy()->subDays($noPayDays),
-                    'end_date' => $yearEnd,
-                    'duration' => $noPayDays,
-                    'no_pay_amount' => $leaveNoPayAmount,
-                ]
-            );
-        } else {
-            // If no excess, remove existing no-pay for that employee this year
-            Leave::where('employee_id', $payroll->employee_id)
-                ->where('leave_type', 'No Pay')
-                ->whereBetween('start_date', [$yearStart, $yearEnd])
-                ->delete();
-        }
-
-        // 🏦 Approved loans
+        // Approved loans
         $approvedLoans = DB::table('loans')
-            ->where('employee_id', $payroll->employee_id)
+            ->where('employee_id', $employee->id)
             ->where('status', 'approved')
             ->get();
 
@@ -149,9 +160,9 @@ public function generatePreviousMonth(Request $request)
             }
         }
 
-        // 💵 Approved advances
+        // Approved advances
         $approvedAdvances = DB::table('advances')
-            ->where('employment_ID', $payroll->employee_id)
+            ->where('employment_ID', $employee->id)
             ->where('status', 'approved')
             ->whereBetween('advance_date', [
                 date('Y-m-01', strtotime($selectedMonth)),
@@ -162,53 +173,47 @@ public function generatePreviousMonth(Request $request)
         $advancePayment = $approvedAdvances->sum('advance_amount');
         $newAdvanceBalance = max(0, ($payroll->advance_balance ?? 0) + $advancePayment);
 
-        // 🕒 Attendance and OT calculation
-        $attendanceRecords = Attendance::where('employee_id', $payroll->employee_id)
+        // Attendance and OT calculation
+        $attendanceRecords = Attendance::where('employee_id', $employee->id)
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
 
         $totalOTHours = $attendanceRecords->sum('overtime_seconds') / 3600;
         $totalLateByHours = $attendanceRecords->sum('late_by_seconds') / 3600;
-        $finalOTHours = max(0, $totalOTHours);
 
-        $grossSalary = $payroll->basic + $payroll->budget_allowance;
-        $otRate = 0.0041667327;
         $regularOTSeconds = 0;
         $sundayOTSeconds = 0;
-        $employee = Employee::find($payroll->employee_id);
 
         foreach ($attendanceRecords as $record) {
             $dayOfWeek = date('w', strtotime($record->date));
-            $isDoubleOTDay = ($dayOfWeek == 0);
+            $isSunday = ($dayOfWeek == 0);
 
             // Department 2 Saturday logic
-            if ($employee && $employee->department_id == 2 && $dayOfWeek == 6) {
-                if ($record->clock_in_time && $record->clock_out_time) {
-                    $workedSeconds = Carbon::parse($record->clock_out_time)
-                        ->diffInSeconds(Carbon::parse($record->clock_in_time));
+            if ($employee->department_id == 2 && $dayOfWeek == 6 && $record->clock_in_time && $record->clock_out_time) {
+                $workedSeconds = Carbon::parse($record->clock_out_time)
+                    ->diffInSeconds(Carbon::parse($record->clock_in_time));
 
-                    if ($workedSeconds > 14400) {
-                        $regularOTSeconds += ($workedSeconds - 14400);
-                    }
+                if ($workedSeconds > 14400) {
+                    $regularOTSeconds += ($workedSeconds - 14400);
                 }
+            } elseif ($isSunday) {
+                $sundayWorkedSeconds = Carbon::parse($record->clock_out_time)
+                    ->diffInSeconds(Carbon::parse($record->clock_in_time));
+                $sundayOTSeconds += $sundayWorkedSeconds;
             } else {
-                if ($isDoubleOTDay) {
-                    $sundayWorkedSeconds = Carbon::parse($record->clock_out_time)
-                        ->diffInSeconds(Carbon::parse($record->clock_in_time));
-                    $sundayOTSeconds += $sundayWorkedSeconds;
-                } else {
-                    $regularOTSeconds += $record->overtime_seconds;
-                }
+                $regularOTSeconds += $record->overtime_seconds;
             }
         }
 
         $regularOTHours = $regularOTSeconds / 3600;
         $sundayOTHours = $sundayOTSeconds / 3600;
 
+        $grossSalary = $payroll->basic + $payroll->budget_allowance;
+        $otRate = 0.0041667327;
         $otPayment = ($regularOTHours * (($grossSalary / 240) * 1.5)) +
                      ($sundayOTHours * ($grossSalary * 1.5 * $otRate * 2));
 
-        // 💰 Deductions
+        // Deductions
         $totalDeductions = (
             ($payroll->epf_8_percent ?? 0) +
             ($payroll->stamp_duty ?? 0) +
@@ -217,7 +222,7 @@ public function generatePreviousMonth(Request $request)
             $totalMonthlyLoanPayment
         );
 
-        // 💵 Earnings
+        // Earnings
         $totalEarnings = (
             $grossSalary +
             ($payroll->transport_allowance ?? 0) +
@@ -230,15 +235,15 @@ public function generatePreviousMonth(Request $request)
 
         $netSalary = $totalEarnings - $totalDeductions;
 
-        // 🧾 Create new salary record
+        // Create salary record
         SalaryDetails::create([
             'employee_name' => $payroll->employee_name,
-            'employee_id' => $payroll->employee_id,
+            'employee_id' => $employee->id,
             'known_name' => $payroll->known_name,
             'epf_no' => $payroll->epf_no,
             'basic' => $payroll->basic,
             'budget_allowance' => $payroll->budget_allowance,
-            'gross_salary' => $payroll->gross_salary,
+            'gross_salary' => $grossSalary,
             'transport_allowance' => $payroll->transport_allowance,
             'attendance_allowance' => $payroll->attendance_allowance,
             'phone_allowance' => $payroll->phone_allowance,
@@ -262,19 +267,12 @@ public function generatePreviousMonth(Request $request)
             'status' => $payroll->status,
         ]);
 
-        // 🔁 Update loans table balances
+        // Update loan balances
         foreach ($newLoanBalances as $loanId => $newBalance) {
             DB::table('loans')->where('id', $loanId)->update([
                 'remaining_balance' => $newBalance,
                 'updated_at' => now()
             ]);
-
-            if ($newBalance == 0) {
-                DB::table('loans')->where('id', $loanId)->update([
-                    'status' => 'approved', // or create a "completed" column
-                    'loan_end_date' => now()
-                ]);
-            }
         }
     }
 
@@ -343,6 +341,7 @@ public function generatePreviousMonth(Request $request)
 
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
+    
 
 public function exportSalaryPDF(Request $request)
 {
