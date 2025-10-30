@@ -119,6 +119,23 @@ class AttendanceController extends Controller
                 ->where('date', $attDate)
                 ->first();
 
+            // ---------- 30-MINUTE GAP CHECK ----------
+            // If a record exists and has a clock-in time, check if 30 minutes have passed
+            if ($attendanceRecord && $attendanceRecord->clock_in_time && !$attendanceRecord->clock_out_time) {
+                $clockInDateTime = Carbon::parse($attendanceRecord->date . ' ' . $attendanceRecord->clock_in_time);
+                $minutesSinceClockIn = $clockInDateTime->diffInMinutes($attDT);
+                
+                if ($minutesSinceClockIn < 30) {
+                    // Less than 30 minutes have passed, ignore this fingerprint entry
+                    file_put_contents(storage_path('logs/attendance_ignored.log'), 
+                        now() . ' - Ignored fingerprint for Employee ID: ' . $employeeId . 
+                        ' - Only ' . $minutesSinceClockIn . ' minutes since check-in' . PHP_EOL, 
+                        FILE_APPEND
+                    );
+                    continue; // Skip this entry
+                }
+            }
+
             // ---------- CROSS-MIDNIGHT CLOSE (00:00–05:00) ----------
             if (!$attendanceRecord && $attTime < '05:00:00') {
                 $prevDate = $attDT->copy()->subDay()->toDateString();
@@ -129,6 +146,20 @@ class AttendanceController extends Controller
                     ->first();
 
                 if ($openPrev) {
+                    // Check 30-minute gap for cross-midnight scenario
+                    $clockInDateTime = Carbon::parse($openPrev->date . ' ' . $openPrev->clock_in_time);
+                    $minutesSinceClockIn = $clockInDateTime->diffInMinutes($attDT);
+                    
+                    if ($minutesSinceClockIn < 30) {
+                        // Less than 30 minutes have passed, ignore this fingerprint entry
+                        file_put_contents(storage_path('logs/attendance_ignored.log'), 
+                            now() . ' - Ignored cross-midnight fingerprint for Employee ID: ' . $employeeId . 
+                            ' - Only ' . $minutesSinceClockIn . ' minutes since check-in' . PHP_EOL, 
+                            FILE_APPEND
+                        );
+                        continue; // Skip this entry
+                    }
+
                     // Compute using full datetimes with correct dates
                     $clockIn  = Carbon::parse($openPrev->date . ' ' . $openPrev->clock_in_time);
                     $clockOut = $attDT->copy(); // this is next-day early morning
