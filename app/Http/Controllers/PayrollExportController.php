@@ -19,12 +19,10 @@ use App\Exports\BankDetailsExport;
 class PayrollExportController extends Controller
 {
     private OvertimeCalculator $overtimeCalculator;
-    private LeaveBalanceService $leaveBalanceService;
 
-    public function __construct(OvertimeCalculator $overtimeCalculator, LeaveBalanceService $leaveBalanceService)
+    public function __construct(OvertimeCalculator $overtimeCalculator)
     {
         $this->overtimeCalculator = $overtimeCalculator;
-        $this->leaveBalanceService = $leaveBalanceService;
     }
 
     public function export(Request $request)
