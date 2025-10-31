@@ -22,12 +22,12 @@
 
 <div class="w-full pt-8">
   <div class="flex items-center justify-between w-full">
-  <div class="w-full flex justify-end items-end pt-4 pr-2">
-  <a href="{{ route('employee.edit', ['id' => $employee->id]) }}" class="flex items-center justify-center space-x-8 px-10 py-2 text-[#184E77] border-2 border-[#184E77] text-2xl bg-white rounded-xl shadow-sm hover:from-[#1B5A8A] hover:to-[#60C3A8]">
-        <p class="text-3xl"><i class="ri-edit-box-line"></i></p>
-        <span>Edit Details</span>
-  </a>
-  </div>
+    <div class="w-full flex justify-end items-end pt-4 pr-2">
+                <a href="{{ route('employee.edit', $employee->id) }}" class="inline-flex items-center px-5 py-2.5 text-lg font-semibold text-white bg-[#40916C] rounded-xl shadow hover:bg-[#1B4332] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#52B69A] transition">
+                        <i class="ri-edit-2-fill mr-2 text-xl"></i>
+                        Edit Employee
+                </a>
+    </div>
 </div>
 <nav class="flex px-5 py-3" aria-label="Breadcrumb">
   <ol class="inline-flex items-center space-x-1 md:space-x-3">
@@ -47,23 +47,26 @@
 <div>
   
 </div>
-<div class="w-full flex space-x-32">
-  <div class="w-1/2 flex flex-col pt-8 pb-4 space-y-4">
-    <div class="w-full flex">
-    <div class="w-1/3 flex justify-start items-center">
-    <img src="{{ $employee->image ? asset('storage/' . $employee->image) : 'https://via.placeholder.com/200/cccccc/666666?text=Employee' }}" class="w-48 h-48 rounded-full object-cover border-4 border-gray-300">
-    </div>
-    <div class="w-2/3 flex flex-col justify-center items-start space-y-4 nunito-">
-          <p class="text-5xl text-black font-bold">{{ $employee->first_name }} {{ $employee->last_name }}</p>
-          <p class="text-5xl text-black font-bold">{{ $employee->employee_id }}</p>
-          <p class="text-3xl text-[#00000080] font-bold">{{ $employee->title }} </p>
-    </div>
-    </div>
-    <div class="w-full h-1/2">
-    <p class="text-xl text-[#00000099] text-justify">{{ $employee->description }} </p>
-    </div>  
+
+ <div class="flex items-center justify-center  bg-gray-100">
+  <div class="w-2/5 flex flex-col pt-8 pb-4 space-y-4 bg-gray-500 rounded-3xl shadow-lg">
+      <div class="flex flex-col items-center justify-start w-full px-16 pt-8 space-y-8">
+          <!--<div class="w-1/3 flex justify-start items-center">
+          <img src="{{ $employee->image ? asset('storage/' . $employee->image) : 'https://via.placeholder.com/200/cccccc/666666?text=Employee' }}" class="w-48 h-48 rounded-full object-cover border-4 border-gray-300">
+          </div>-->
+          <div class="w-full flex flex-col justify-center items-center text-center space-y-4 nunito-">
+              <p class="text-5xl text-white">{{ $employee->full_name }}</p>
+              <p class="text-xl text-white">Emp No:{{ $employee->employee_id }}</p>
+              <p class="text-3xl text-white ">{{ $employee->title }}</p>
+          </div>
+      </div>
+      <div class="w-full h-1/2">
+          <p class="text-xl text-[#00000099] text-justify">{{ $employee->description }}</p>
+      </div>  
+  </div>
 </div>
-<div class="w-1/2 flex flex-col justify-start items-start nunito- rounded-3xl">
+
+<!--<div class="w-1/2 flex flex-col justify-start items-start nunito- rounded-3xl">
         <div class="w-full flex flex-col jusity-start items-start bg-[#D9D9D980] px-4 pt-4 rounded-t-xl">
             <p class="text-3xl font-bold text-black">Legal Documents</p>
             @if (!empty($employee->legal_documents) && is_array(json_decode($employee->legal_documents, true)))
@@ -72,7 +75,7 @@
             <ul>
                
                     <li>
-                        <!-- Extract the file name from the path -->
+                        Extract the file name from the path 
                         <span class="text-2xl">
                           <i class="ri-file-pdf-2-fill"></i>
                       </span>
@@ -80,7 +83,7 @@
                             $fileName = basename($document);
                         @endphp
 
-                        <!-- Display as a link with the actual document name -->
+                         Display as a link with the actual document name 
                         <a href="{{ asset('storage/' . $document) }}" target="_blank" class="text-blue-500 underline">
                             {{ $fileName }}
                         </a>
@@ -92,9 +95,9 @@
             
         </div>
     </div>
-</div>
+</div>-->
 
-    <div class="w-full flex space-x-16 pt-8">
+   <!-- <div class="w-full flex space-x-16 pt-8">
     <div class="w-full flex flex-col space-y-4 p-8 bg-[#D9D9D980] rounded-3xl cursor-pointer nunito focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
     <div class="w-full flex pl-8">
         <p class="text-3xl font-bold text-black">Employment Information</p>
@@ -138,22 +141,39 @@
         </div>
     </div>
     
-    </div>
-    <div class="w-full flex flex-col space-y-8 p-8 bg-[#D9D9D980] rounded-3xl mt-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
+    </div>-->
+   <div class="w-full flex flex-col space-y-8 p-8 bg-[#D9D9D980] rounded-3xl mt-4">
     <div class="w-full flex pl-8">
         <p class="text-3xl font-bold text-black">Personal Information</p>
     </div>
-    <div class="w-full flex">
-        <div class="w-1/2 flex flex-col pl-8 space-y-4 text-[#00000080]">
-            <div class="w-full flex space-x-8">
-                <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                <label for="full_name" class="text-xl">Full Name</label>
-            </div>
-            <div class="w-full flex space-x-8">
-                <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                <label for="age" class="text-xl">NIC</label>
-            </div>
-            <div class="w-full flex space-x-8">
+
+    <div class="w-full flex flex-col space-y-4 pl-8 text-black">
+        <!-- Full Name -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-info-card-fill text-xl"></i>
+            <span class="w-32 text-xl font-semibold">Full Name:</span>
+            <span class="text-xl">{{ $employee->full_name }}</span>
+        </div>
+
+        <!-- Phone -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-phone-fill text-xl"></i>
+            <span class="w-32 text-xl font-semibold">Phone No:</span>
+            <span class="text-xl">{{ $employee->phone }}</span>
+        </div>
+
+        <!-- Address -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-home-2-fill text-xl"></i>
+            <span class="w-32 text-xl font-semibold">Address:</span>
+            <span class="text-xl">{{ $employee->address }}</span>
+        </div>
+    </div>
+</div>
+
+
+    </div>
+           <!-- <div class="w-full flex space-x-8">
                 <p class="text-xl"><i class="ri-info-card-fill"></i></p>
                 <label for="email" class="text-xl">Email Address</label>
             </div>
@@ -172,22 +192,9 @@
             <div class="w-full flex space-x-8">
                 <p class="text-xl"><i class="ri-info-card-fill"></i></p>
                 <label for="address" class="text-xl">Living Address</label>
-            </div>
-        </div>
-        <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-        <p class="text-xl">{{ $employee->full_name }}</p>
-        <p class="text-xl">{{ $employee->nic }}</p>
-        <p class="text-xl">{{ $employee->email }}</p>
-        <p class="text-xl">{{ $employee->phone }}</p>
-        <p class="text-xl">{{ $employee->gender}}</p>
-        <p class="text-xl">{{ $employee->date_of_birth }}</p>
-        <p class="text-xl">{{ $employee->address }}</p>
-        </div>
-    </div>
-</div>
-
-    </div>
-    <div class="w-full flex space-x-16 pb-8 pt-8">
+            </div>-->
+ 
+   <!-- <div class="w-full flex space-x-16 pb-8 pt-8">
         <div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
     <div class="w-full flex pl-8">
         <p class="text-3xl font-bold text-black">Education and Experience</p>
@@ -256,38 +263,107 @@
     </div>
 </div>
 
-    </div>
-    <div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer mt-4 focus:outline-none focus:ring-2 focus:ring-[#52B69A] focus:border-[#184E77]">
+    </div>-->
+<div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer mt-4">
     <div class="w-full flex pl-8">
         <p class="text-3xl font-bold text-black">Bank Details</p>
     </div>
-    <div class="w-full flex">
-        <div class="w-1/2 flex flex-col pl-8 space-y-4 text-[#00000080]">
-            <div class="w-full flex space-x-8">
-                <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                <label for="account_holder_name" class="text-xl">Account Holder Name</label>
-            </div>
-            <div class="w-full flex space-x-8">
-                <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                <label for="bank_name" class="text-xl">Bank Name</label>
-            </div>
-            <div class="w-full flex space-x-8">
-                <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                <label for="account_no" class="text-xl">Account No</label>
-            </div>
-            <div class="w-full flex space-x-8">
-                <p class="text-xl"><i class="ri-info-card-fill"></i></p>
-                <label for="branch_name" class="text-xl">Branch Name</label>
-            </div>
+
+    <div class="w-full flex flex-col space-y-4 pl-8 text-black">
+        <!-- Account Holder Name -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-info-card-fill text-xl"></i>
+            <span class="w-40 text-xl font-semibold">Account Holder Name:</span>
+            <span class="text-xl">{{ $employee->bankDetails->account_holder_name ?? 'N/A' }}</span>
         </div>
-        <div class="w-3/4 space-y-4 pl-16 text-black font-bold">
-            <p class="text-xl">{{ $employee->account_holder_name ?? 'N/A' }}</p>
-            <p class="text-xl">{{ $employee->bank_name ?? 'N/A' }}</p>
-            <p class="text-xl">{{ $employee->account_no ?? 'N/A' }}</p>
-            <p class="text-xl">{{ $employee->branch_name ?? 'N/A' }}</p>
+
+        <!-- Bank Code -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-bank-fill text-xl"></i>
+            <span class="w-40 text-xl font-semibold">Bank Code:</span>
+            <span class="text-xl">{{ $employee->bankDetails->bank_code ?? 'N/A' }}</span>
+        </div>
+
+        <!-- Account Number -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-file-text-fill text-xl"></i>
+            <span class="w-40 text-xl font-semibold">Account No:</span>
+            <span class="text-xl">{{ $employee->bankDetails->account_number ?? 'N/A' }}</span>
+        </div>
+
+        <!-- Branch Code -->
+        <div class="flex items-center space-x-4">
+            <i class="ri-building-4-fill text-xl"></i>
+            <span class="w-40 text-xl font-semibold">Branch Code:</span>
+            <span class="text-xl">{{ $employee->bankDetails->branch_code ?? 'N/A' }}</span>
         </div>
     </div>
 </div>
+
+<div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer mt-4">
+    <div class="w-full flex pl-8">
+        <p class="text-3xl font-bold text-black">Salary Details</p>
+    </div>
+
+    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-4 pl-8 pr-8 text-black">
+        <div class="flex items-center space-x-4">
+            <i class="ri-file-list-3-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">EPF Number:</span>
+            <span class="text-xl">{{ $employee->epf_no ?? 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-money-dollar-circle-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Basic Salary:</span>
+            <span class="text-xl">{{ $employee->basic ? number_format($employee->basic, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-wallet-3-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Budget Allowance:</span>
+            <span class="text-xl">{{ $employee->budget_allowance ? number_format($employee->budget_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-bus-2-fill text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Transport Allowance:</span>
+            <span class="text-xl">{{ $employee->transport_allowance ? number_format($employee->transport_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-award-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Attendance Allowance:</span>
+            <span class="text-xl">{{ $employee->attendance_allowance ? number_format($employee->attendance_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-smartphone-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Phone Allowance:</span>
+            <span class="text-xl">{{ $employee->phone_allowance ? number_format($employee->phone_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-car-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Car Allowance:</span>
+            <span class="text-xl">{{ $employee->car_allowance ? number_format($employee->car_allowance, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-funds-box-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Production Bonus:</span>
+            <span class="text-xl">{{ $employee->production_bonus ? number_format($employee->production_bonus, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-stamp-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Stamp Duty:</span>
+            <span class="text-xl">{{ $employee->stamp_duty ? number_format($employee->stamp_duty, 2) : 'N/A' }}</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-bar-chart-2-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Gross (Basic + Budget):</span>
+            <span class="text-xl">
+                @php
+                    $gross = ($employee->basic ?? 0) + ($employee->budget_allowance ?? 0);
+                @endphp
+                {{ $gross > 0 ? number_format($gross, 2) : 'N/A' }}
+            </span>
+        </div>
+    </div>
+</div>
+
 
 
 </div>

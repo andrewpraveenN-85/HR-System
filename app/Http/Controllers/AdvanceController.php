@@ -24,7 +24,8 @@ class AdvanceController extends Controller
      */
     public function create()
     {
-        return view('management.newadvance.create');
+        $employees = Employee::all();
+        return view('management.newadvance.create', compact('employees'));
     }
 
     /**

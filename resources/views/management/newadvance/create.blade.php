@@ -9,17 +9,29 @@
       @csrf
       <div class="grid grid-cols-2 gap-4">
 
-          <div>
-            <label for="employment_ID" class="block text-xl text-black font-bold">Employee ID:</label>
-            <input
-              type="text"
-              id="employment_ID"
-              name="employment_ID"
-              placeholder="Enter your Employee ID"
-              required
-              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 text-[#0000008C] font-bold"
-            />
+         <div>
+              <label for="employment_ID" class="block text-xl text-black font-bold">Employee:</label>
+              <select id="employment_ID" name="employment_ID" required
+                  class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 text-[#0000008C] font-bold select2">
+                  <option value="">Select Employee</option>
+                  @foreach($employees as $employee)
+                      <option value="{{ $employee->employee_id }}" {{ old('employment_ID') == $employee->employee_id ? 'selected' : '' }}>
+                          {{ $employee->employee_id }} - {{ $employee->full_name }}
+                      </option>
+                  @endforeach
+              </select>
           </div>
+         
+          <script>
+          $(document).ready(function() {
+              $('#employment_ID').select2({
+                  placeholder: "Select Employee",
+                  allowClear: true,
+                  width: '100%'  
+              });
+          });
+          </script>
+         
           <div>
             <label for="advance_amount" class="block text-xl text-black font-bold">Advance Amount:</label>
             <input
@@ -56,8 +68,8 @@
               id="status"
               name="status"
               class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:bg-gradient-to-r from-[#184E77] to-[#52B69A] text-xl text-black focus:border-blue-500 font-bold text-[#0000008C]">
-              <option value="approved">Approved</option>
               <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>

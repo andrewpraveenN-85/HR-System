@@ -18,6 +18,12 @@ use App\Exports\BankDetailsExport;
 
 class PayrollExportController extends Controller
 {
+    private OvertimeCalculator $overtimeCalculator;
+
+    public function __construct(OvertimeCalculator $overtimeCalculator)
+    {
+        $this->overtimeCalculator = $overtimeCalculator;
+    }
 
     public function export(Request $request)
     {
@@ -120,14 +126,17 @@ public function generatePreviousMonth(Request $request)
         $approvedAdvances = DB::table('advances')
             ->where('employment_ID', $payroll->employee_id)
             ->where('status', 'approved')
-            ->whereBetween('advance_date', [$startDate, $endDate])
+            ->whereBetween('advance_date', [
+        date('Y-m-01', strtotime($selectedMonth)), // start of selected month
+        date('Y-m-t', strtotime($selectedMonth))   // end of selected month
+        ])
             ->get();
 
         // Calculate total advance amount for this period
         $advancePayment = $approvedAdvances->sum('advance_amount');
         
         // Calculate new advance balance
-        $newAdvanceBalance = max(0, $payroll->advance_balance + $advancePayment);
+        $newAdvanceBalance = max(0, ($payroll->advance_balance ?? 0) + $advancePayment);
 
         $attendanceRecords = Attendance::where('employee_id', $payroll->employee_id)
             ->whereBetween('date', [$startDate, $endDate])

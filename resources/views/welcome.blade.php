@@ -5,7 +5,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="./assetes/css/root.css">
+        <link rel="stylesheet" href="{{ asset('assetes/css/root.css') }}">
         <link rel="icon" href="{{ asset('browser_icon.png') }}" type="image/x-icon">
         <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,7 @@
 
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="./assetes/css/root.css">
+    <link rel="stylesheet" href="{{ asset('assetes/css/root.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <script src="https://unpkg.com/alpinejs" defer></script>
   

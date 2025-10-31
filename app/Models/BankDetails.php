@@ -15,7 +15,9 @@ class BankDetails extends Model
         'employee_id',
         'account_holder_name',
         'bank_name',
+        'bank_code',
         'branch',
+        'branch_code',
         'account_number'
     ];
 

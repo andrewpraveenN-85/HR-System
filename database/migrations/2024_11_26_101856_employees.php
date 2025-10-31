@@ -34,10 +34,10 @@ return new class extends Migration
             $table->date('employment_start_date')->nullable();
             $table->date('employment_end_date')->nullable();
             $table->string('status')->nullable();
-            $table->string('account_holder_name');
-            $table->string('bank_name');
-            $table->string('account_no');
-            $table->string('branch_name');
+            $table->string('account_holder_name')->nullable();
+            $table->string('bank_name')->nullable();
+            $table->string('account_no')->nullable();
+            $table->string('branch_name')->nullable();
             $table->timestamps();
             $table->foreign('department_id')->references('id')->on('departments')->onDelete('set null');
             $table->foreign('manager_id')->references('id')->on('employees')->onDelete('set null');

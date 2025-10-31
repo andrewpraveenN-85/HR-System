@@ -11,7 +11,8 @@ class LoanController extends Controller
 {
     public function create()
     {
-        return view('management.advance.advance-create'); 
+        $employees = Employee::all(); // Get all employees
+    return view('management.advance.advance-create', compact('employees'));
     }
 
     public function store(Request $request)
@@ -206,6 +207,42 @@ class LoanController extends Controller
         default:
             return 2500;
     }
+}
+
+
+public function getEmployeeLoan($employeeId)
+{
+    $loan = Loan::where('employee_id', $employeeId)
+        ->where('status', 'approved')
+        ->first();
+
+    if (!$loan) {
+        return response()->json(['monthly_paid' => 0, 'remaining_balance' => 0]);
+    }
+
+    // Set monthly deduction based on employee ID
+    if ($employeeId == 3 || $employeeId == 5) {
+        $monthlyPaid = 5000;
+    } elseif ($employeeId == 7) {
+        $monthlyPaid = 7500;
+    } else {
+        $monthlyPaid = 2500;
+    }
+
+    // Remaining balance logic
+    $remainingBalance = max($loan->remaining_balance, 0);
+
+    // If remaining balance is less than monthly payment, last deduction = remaining balance
+    if ($remainingBalance < $monthlyPaid) {
+        $monthlyPaid = $remainingBalance;
+    }
+
+     $remainingBalanceAfterPayment = max($remainingBalance - $monthlyPaid, 0);
+
+    return response()->json([
+        'monthly_paid' => $monthlyPaid,
+        'remaining_balance' => $remainingBalanceAfterPayment
+    ]);
 }
 
     /**

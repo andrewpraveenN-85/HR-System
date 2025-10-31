@@ -95,6 +95,12 @@
         <div class="flex items-center space-x-4">
 
 
+        <a href="{{ route('payroll.saturday-roster.index') }}" class="flex items-center justify-center nunito- space-x-2 px-6 py-2 text-[#184E77] border-2 border-[#184E77] md:text-2xl text-xl bg-white rounded-xl shadow-sm hover:bg-[#184E77] hover:text-white">
+            <span class="text-2xl"><i class="ri-calendar-event-line"></i></span>
+            <span>Saturday Roster</span>
+        </a>
+
+
         <!-- Filter Button -->
 
 
@@ -385,16 +391,19 @@
 
 <script>
 
-document.getElementById('Export_bank_document').addEventListener('click', () => {
-    const month = document.getElementById('monthSelector').value;
+const exportBankBtn = document.getElementById('Export_bank_document');
+if (exportBankBtn) {
+    exportBankBtn.addEventListener('click', () => {
+        const month = document.getElementById('monthSelector').value;
 
-    if (!month) {
-        alert('Please select a month before exporting.');
-        return;
-    }
-alert(`${window.location.origin}`);
-    window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export-bank-details?selected_month=${month}`;
-});
+        if (!month) {
+            alert('Please select a month before exporting.');
+            return;
+        }
+        alert(`${window.location.origin}`);
+        window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export-bank-details?selected_month=${month}`;
+    });
+}
 
 function formatDuration(seconds) {
     // Calculate hours, minutes, and seconds
@@ -464,21 +473,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const menu = document.getElementById(menuId);
     menu.classList.toggle('hidden');
   }
-  const textElements = document.querySelectorAll('span.text-xl');
 
-textElements.forEach((element) => {
-    element.addEventListener('click', function () {
-        // Reset all text elements to black
-        textElements.forEach((el) => {
-            el.classList.remove('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-            el.classList.add('text-black');
+  // Wrap in IIFE to avoid global scope pollution
+  (function() {
+    const textElements = document.querySelectorAll('span.text-xl');
+
+    textElements.forEach((element) => {
+        element.addEventListener('click', function () {
+            // Reset all text elements to black
+            textElements.forEach((el) => {
+                el.classList.remove('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
+                el.classList.add('text-black');
+            });
+
+            // Apply gradient to the clicked element
+            this.classList.remove('text-black');
+            this.classList.add('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
         });
-
-        // Apply gradient to the clicked element
-        this.classList.remove('text-black');
-        this.classList.add('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
     });
-});
+  })();
+
 // Initialize Flatpickr
 $(document).ready(function () {
     // Initialize DataTable
@@ -603,19 +617,21 @@ $(document).on('click', '.dataTables_paginate button', function () {
     const selectedDate = document.getElementById("selectedDate");
     const calendarButton = document.getElementById("calendarButton");
 
-    flatpickr(calendarInput, {
-        dateFormat: "Y-m-d",
-        onChange: function (selectedDates, dateStr) {
-            selectedDate.textContent = dateStr;
-            // Filter DataTable by selected date
-            table.search(dateStr).draw();
-        },
-    });
+    if (calendarInput && selectedDate && calendarButton) {
+        flatpickr(calendarInput, {
+            dateFormat: "Y-m-d",
+            onChange: function (selectedDates, dateStr) {
+                selectedDate.textContent = dateStr;
+                // Filter DataTable by selected date
+                table.search(dateStr).draw();
+            },
+        });
 
-    calendarButton.addEventListener("click", () => {
-        console.log("Calendar-month");
-        calendarInput._flatpickr.open();
-    });
+        calendarButton.addEventListener("click", () => {
+            console.log("Calendar-month");
+            calendarInput._flatpickr.open();
+        });
+    }
 
 
     const monthInput = document.getElementById("monthInput");
@@ -624,21 +640,23 @@ $(document).on('click', '.dataTables_paginate button', function () {
         const monthButton = document.getElementById("monthButton");
        // <p id="selectedMonth" class="text-lg font-bold">03.2021</p>
 
-        flatpickr(monthInput, {
-            dateFormat: "Y-m", // Month and Year
-            plugins: [new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m" })],
-            onChange: function (selectedDates, dateStr) {
-                //console.log(dateStr);
-                selectedMonthDisplay.textContent = dateStr
-                selectedMonth.textContent = dateStr;
-                // Filter DataTable by Paid Month
-                table.search(dateStr).draw();
-            },
-        });
+        if (monthInput && monthButton) {
+            flatpickr(monthInput, {
+                dateFormat: "Y-m", // Month and Year
+                plugins: [new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m" })],
+                onChange: function (selectedDates, dateStr) {
+                    //console.log(dateStr);
+                    if (selectedMonthDisplay) selectedMonthDisplay.textContent = dateStr;
+                    if (selectedMonth) selectedMonth.textContent = dateStr;
+                    // Filter DataTable by Paid Month
+                    table.search(dateStr).draw();
+                },
+            });
 
-        monthButton.addEventListener("click", () => {
-            monthInput._flatpickr.open();
-        });
+            monthButton.addEventListener("click", () => {
+                monthInput._flatpickr.open();
+            });
+        }
 
 
     table.draw('page');
@@ -662,51 +680,58 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-    document.getElementById('Export_spreadsheet').addEventListener('click', () => {
-      // console.log(window.location.origin);
-        const month = document.getElementById('monthSelector').value;
-      // alert(month);
-        if (!month) {
-            alert('Please select a month before exporting.');
-            return;
-        }
-        window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export/spreadsheet?selected_month=${month}`;
-    });
-
-    document.getElementById('Generate_payslips').addEventListener('click', () => {
-      // console.log(window.location.origin);
-        const month = document.getElementById('monthSelector').value;
-      // alert(month);
-        if (!month) {
-            alert('Please select a month before exporting.');
-            return;
-        }
-        window.location.href = `${window.location.origin}/dashboard/payroll/payroll/generate/paysheets?selected_month=${month}`;
-    });
-
-
-
-    document.getElementById('Export_payslips').addEventListener('click', () => {
-
-        const month = document.getElementById('monthSelector').value;
-        if (!month) {
-            alert('Please select a month before exporting.');
-            return;
-        }
-        window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export/paysheets?selected_month=${month}`;
-
-    });
-
-document.getElementById('Export_PDF').addEventListener('click', () => {
-    const month = document.getElementById('monthSelector').value;
-    if (!month) {
-        alert('Please select a month before exporting.');
-        return;
+    const exportSpreadsheetBtn = document.getElementById('Export_spreadsheet');
+    if (exportSpreadsheetBtn) {
+        exportSpreadsheetBtn.addEventListener('click', () => {
+            // console.log(window.location.origin);
+            const month = document.getElementById('monthSelector').value;
+            // alert(month);
+            if (!month) {
+                alert('Please select a month before exporting.');
+                return;
+            }
+            window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export/spreadsheet?selected_month=${month}`;
+        });
     }
 
-    // Include the full prefix path
-    window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export/pdf?selected_month=${month}`;
-});
+    const generatePayslipsBtn = document.getElementById('Generate_payslips');
+    if (generatePayslipsBtn) {
+        generatePayslipsBtn.addEventListener('click', () => {
+            // console.log(window.location.origin);
+            const month = document.getElementById('monthSelector').value;
+            // alert(month);
+            if (!month) {
+                alert('Please select a month before exporting.');
+                return;
+            }
+            window.location.href = `${window.location.origin}/dashboard/payroll/payroll/generate/paysheets?selected_month=${month}`;
+        });
+    }
+
+    const exportPayslipsBtn = document.getElementById('Export_payslips');
+    if (exportPayslipsBtn) {
+        exportPayslipsBtn.addEventListener('click', () => {
+            const month = document.getElementById('monthSelector').value;
+            if (!month) {
+                alert('Please select a month before exporting.');
+                return;
+            }
+            window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export/paysheets?selected_month=${month}`;
+        });
+    }
+
+    const exportPDFBtn = document.getElementById('Export_PDF');
+    if (exportPDFBtn) {
+        exportPDFBtn.addEventListener('click', () => {
+            const month = document.getElementById('monthSelector').value;
+            if (!month) {
+                alert('Please select a month before exporting.');
+                return;
+            }
+            // Include the full prefix path
+            window.location.href = `${window.location.origin}/dashboard/payroll/payroll/export/pdf?selected_month=${month}`;
+        });
+    }
 
 
 
