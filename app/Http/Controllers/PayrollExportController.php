@@ -144,20 +144,27 @@ foreach ($employees as $employee) {
             $endDate
         );
 
-        // ========== Get approved loans for this employee ==========
+        /**
+         * ========== LOAN DEDUCTION SYSTEM ==========
+         * 
+         * Uses the monthly_paid field from each loan record.
+         * Each loan can have its own monthly deduction amount.
+         * The remaining balance carries over to subsequent months until fully paid.
+         */
         $approvedLoans = DB::table('loans')
             ->where('employee_id', $employee->id)
             ->where('status', 'approved')
             ->get();
 
-        // Calculate total monthly loan payment
+        // Calculate total monthly loan payment using each loan's monthly_paid
         $totalMonthlyLoanPayment = 0;
         $newLoanBalances = [];
 
         foreach ($approvedLoans as $loan) {
             // Calculate monthly payment for each active loan
             if ($loan->remaining_balance > 0) {
-                $monthlyPayment = $loan->monthly_paid;
+                // Use the loan's monthly_paid amount
+                $monthlyPayment = $loan->monthly_paid ?? 2500.00;
                 
                 // If remaining balance is less than monthly payment, pay only the remaining
                 $actualPayment = min($monthlyPayment, $loan->remaining_balance);
@@ -165,6 +172,16 @@ foreach ($employees as $employee) {
                 
                 // Update remaining balance for this loan
                 $newLoanBalances[$loan->id] = max(0, $loan->remaining_balance - $actualPayment);
+                
+                // Log the deduction for tracking
+                Log::info("Loan Deduction for {$employee->full_name}", [
+                    'employee_id' => $employee->employee_id,
+                    'loan_id' => $loan->id,
+                    'monthly_paid' => $monthlyPayment,
+                    'actual_payment' => $actualPayment,
+                    'previous_balance' => $loan->remaining_balance,
+                    'new_balance' => $newLoanBalances[$loan->id],
+                ]);
             }
         }
 

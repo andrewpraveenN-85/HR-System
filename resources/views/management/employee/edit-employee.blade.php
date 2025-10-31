@@ -260,7 +260,7 @@
                         <label for="production_bonus" class="text-xl font-semibold">Production Bonus</label>
                         <input id="production_bonus" name="production_bonus" type="number" step="0.01" min="0" value="{{ old('production_bonus', $employee->production_bonus) }}" class="input-field">
                     </div>
-                    <div class="flex flex-col space-y-2 md:col-span-2">
+                    <div class="flex flex-col space-y-2">
                         <label for="stamp_duty" class="text-xl font-semibold">Stamp Duty</label>
                         <input id="stamp_duty" name="stamp_duty" type="number" step="0.01" min="0" value="{{ old('stamp_duty', $employee->stamp_duty ?? 25.00) }}" class="input-field">
                     </div>
