@@ -17,6 +17,15 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class PayrollController extends Controller
 {
+    private OvertimeCalculator $overtimeCalculator;
+    private LeaveBalanceService $leaveBalanceService;
+
+    public function __construct(OvertimeCalculator $overtimeCalculator, LeaveBalanceService $leaveBalanceService)
+    {
+        $this->overtimeCalculator = $overtimeCalculator;
+        $this->leaveBalanceService = $leaveBalanceService;
+    }
+
     public function create()
     {
       $employees = Employee::all(); // fetch all employees
