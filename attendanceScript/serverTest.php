@@ -197,14 +197,14 @@ class ServerTest
 
             // Test sending to the API
             echo "Select API endpoint:\n";
-            echo "1. Local (http://127.0.0.1:8001/api/attendance/store)\n";
+            echo "1. Local (http://127.0.0.1:8000/api/attendance/store)\n";
             echo "2. Remote (https://hr.jaan.lk/api/attendance/store)\n";
             echo "3. Custom URL\n\n";
 
             $envChoice = readline("Choose (1/2/3): ");
 
             if ($envChoice == '1') {
-                $apiUrl = "http://127.0.0.1:8001/api/attendance/store";
+                $apiUrl = "http://127.0.0.1:8000/api/attendance/store";
             } elseif ($envChoice == '2') {
                 $apiUrl = "https://hr.jaan.lk/api/attendance/store";
             } else {
