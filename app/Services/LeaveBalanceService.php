@@ -34,65 +34,65 @@ class LeaveBalanceService
         // Short leave allocation (36 short leaves = 9 days equivalent)
         $shortLeaveTotal = 36;
 
+        // Calculate leaves used from leave year start until the end of the period
+        $leavesUsedInYear = Leave::where('employee_id', $employeeId)
+            ->where('status', 'approved')
+            ->where('start_date', '>=', $leaveYearStart)
+            ->where('start_date', '<=', $endDate)
+            ->get();
+
+        // Calculate total days and short leaves used
+        $annualDaysUsed = 0;
+        $shortLeavesUsed = 0;
+
+        foreach ($leavesUsedInYear as $leave) {
+            if ($leave->leave_category === 'short_leave') {
+                $shortLeavesUsed += $leave->duration;
+            } else {
+                // Full day or half day leaves count towards annual leave
+                $annualDaysUsed += $leave->duration;
+            }
+        }
+
+        // Calculate remaining balances
+        $annualLeaveRemaining = max(0, $annualLeaveTotal - $annualDaysUsed);
+        $shortLeaveRemaining = max(0, $shortLeaveTotal - $shortLeavesUsed);
+
         // Get daily rate for no-pay calculation
         $dailyRate = $this->getDailyRate($employee);
 
         // Calculate no-pay for leaves in the current period only
         $noPay = 0;
-
-        // Get all leaves from leave year start up to the START of current period
-        $leavesBeforePeriod = Leave::where('employee_id', $employeeId)
-            ->where('status', 'approved')
-            ->where('start_date', '>=', $leaveYearStart)
-            ->where('start_date', '<', $startDate)
-            ->orderBy('start_date', 'asc')
-            ->get();
-
-        // Calculate balance at the start of the current period
-        $annualDaysUsedBefore = 0;
-        $shortLeavesUsedBefore = 0;
-
-        foreach ($leavesBeforePeriod as $leave) {
-            if ($leave->leave_category === 'short_leave') {
-                $shortLeavesUsedBefore += $leave->duration;
-            } else {
-                $annualDaysUsedBefore += $leave->duration;
-            }
-        }
-
-        // Starting balance for the current period
-        $remainingAnnualLeave = max(0, $annualLeaveTotal - $annualDaysUsedBefore);
-        $remainingShortLeave = max(0, $shortLeaveTotal - $shortLeavesUsedBefore);
-
-        // Get leaves in the current period (selected month)
         $currentPeriodLeaves = Leave::where('employee_id', $employeeId)
             ->where('status', 'approved')
             ->whereBetween('start_date', [$startDate, $endDate])
-            ->orderBy('start_date', 'asc')
             ->get();
 
-        // Process each leave in the current period
+        // Track running balance for this period
+        $tempAnnualBalance = $annualLeaveRemaining;
+        $tempShortBalance = $shortLeaveRemaining;
+
         foreach ($currentPeriodLeaves as $leave) {
             if ($leave->leave_category === 'short_leave') {
                 // Short leave calculation
-                if ($leave->duration > $remainingShortLeave) {
-                    // Calculate excess short leaves that trigger no-pay
-                    $excessShortLeaves = $leave->duration - $remainingShortLeave;
+                if ($leave->duration > $tempShortBalance) {
+                    // Excess short leaves trigger no-pay
+                    $excessShortLeaves = $leave->duration - $tempShortBalance;
                     // Each short leave is 1/4 of a day
                     $noPay += ($excessShortLeaves / 4) * $dailyRate;
-                    $remainingShortLeave = 0;
+                    $tempShortBalance = 0;
                 } else {
-                    $remainingShortLeave -= $leave->duration;
+                    $tempShortBalance -= $leave->duration;
                 }
             } else {
                 // Full day or half day leave calculation
-                if ($leave->duration > $remainingAnnualLeave) {
-                    // Calculate excess days that trigger no-pay
-                    $excessDays = $leave->duration - $remainingAnnualLeave;
+                if ($leave->duration > $tempAnnualBalance) {
+                    // Excess annual leave triggers no-pay
+                    $excessDays = $leave->duration - $tempAnnualBalance;
                     $noPay += $excessDays * $dailyRate;
-                    $remainingAnnualLeave = 0;
+                    $tempAnnualBalance = 0;
                 } else {
-                    $remainingAnnualLeave -= $leave->duration;
+                    $tempAnnualBalance -= $leave->duration;
                 }
             }
         }
