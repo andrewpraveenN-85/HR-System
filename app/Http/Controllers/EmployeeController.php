@@ -240,30 +240,27 @@ class EmployeeController extends Controller
         $validated = $request->validate([
             'full_name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
             'employee_id' => 'required|string|max:255|unique:employees,employee_id',
-            // 'first_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
-            // 'last_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
-            // 'email' => 'nullable|email|unique:employees,email',
-            // 'phone' => 'nullable|string|max:15',
-            // 'address' => 'nullable|string',
-            // 'date_of_birth' => 'nullable|date',
-            // 'nic' => 'nullable|string',
-            // 'gender' => 'nullable|string',
-            'title' => 'nullable|string|regex:/^[a-zA-Z\s]+$/',
-            // 'employment_type' => 'nullable|string|regex:/^[a-zA-Z\s]+$/',
-            // 'image' => 'nullable|mimes:jpg,jpeg,png,bmp,tiff|max:4096',
-            // 'employee_id' => 'nullable|string|max:255',
-            // 'description' => 'nullable|string|max:255',
-            // 'branch' => 'nullable|string',
-            // 'name' => 'nullable|string',
-            // 'probation_start_date' => 'nullable|date',
-            // 'probation_period' => 'nullable|integer',
-            // 'department_id' => 'nullable|exists:departments,id',
-            // 'manager_id' => 'required_if:isFirstEmployee,false|exists:employees,id',
-            // 'education_id' => 'nullable|exists:education,id',
-            // 'employment_start_date' => 'nullable|date',
-            // 'employment_end_date' => 'nullable|date',
-            // 'status' => 'nullable|string|max:255',
-            // 'legal_documents' => 'nullable|array',
+            'personal_full_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'first_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'last_name' => 'nullable|string|max:255|regex:/^[a-zA-Z\s]+$/',
+            'email' => 'nullable|email|unique:employees,email',
+            'phone' => 'nullable|string|max:15',
+            'address' => 'nullable|string',
+            'date_of_birth' => 'nullable|date',
+            'nic' => 'nullable|string',
+            'gender' => 'nullable|string',
+            'title' => 'required|string|regex:/^[a-zA-Z\s]+$/',
+            'employment_type' => 'required|string',
+            'image' => 'nullable|mimes:jpg,jpeg,png,bmp,tiff|max:4096',
+            'description' => 'nullable|string|max:255',
+            'branch' => 'required|string',
+            'name' => 'required|string',
+            'department_id' => 'required|string|max:255',
+            'probation_start_date' => 'nullable|date',
+            'probation_period' => 'nullable|integer|min:1',
+            'manager_id' => $isFirstEmployee ? 'nullable|exists:employees,id' : 'required|exists:employees,id',
+            'employment_start_date' => 'nullable|date',
+            'employment_end_date' => 'nullable|date',
             'account_holder_name' => 'required|string|regex:/^[a-zA-Z\s]+$/',
             'bank_name' => 'required|string|regex:/^[a-zA-Z\s]+$/',
             'bank_code' => 'nullable|string|max:20',
@@ -279,16 +276,6 @@ class EmployeeController extends Controller
             'car_allowance' => 'nullable|numeric|min:0',
             'production_bonus' => 'nullable|numeric|min:0',
             'stamp_duty' => 'nullable|numeric|min:0',
-            // 'degree' => 'nullable|string|max:255',
-            // 'institution' => 'nullable|string|max:255',
-            // 'graduation_year' => 'nullable|integer',
-            // 'work_experience_years' => 'nullable|integer|min:1|max:365',
-            // 'work_experience_role' => 'nullable|string|max:255',
-            // 'work_experience_company' => 'nullable|string|max:255',
-            // 'course_name' => 'nullable|string|max:255',
-            // 'training_provider' => 'nullable|string|max:255',
-            // 'completion_date' => 'nullable|date',
-            // 'certification_status' => 'nullable|string|max:255',
         ]);
 
         $imagePath = null;
@@ -306,20 +293,42 @@ class EmployeeController extends Controller
                 );
             }
 
-            // Find default department if available
-            $department = Department::first();
+            // Find department by name and branch
+            $department = Department::where('name', $validated['name'])
+                ->where('branch', $validated['branch'])
+                ->first();
+
+            if (!$department) {
+                return redirect()->back()->withErrors(['department_id' => 'Invalid department details provided.'])->withInput();
+            }
 
             // Create employee
             $employee = Employee::create([
                 'full_name' => $validated['full_name'],
+                'first_name' => $validated['first_name'] ?? null,
+                'last_name' => $validated['last_name'] ?? null,
+                'email' => $validated['email'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'age' => !empty($validated['date_of_birth']) ? Carbon::parse($validated['date_of_birth'])->age : null,
+                'nic' => $validated['nic'] ?? null,
+                'gender' => $validated['gender'] ?? null,
                 'title' => $validated['title'],
+                'employment_type' => $validated['employment_type'],
                 'employee_id' => $validated['employee_id'],
+                'description' => $validated['description'] ?? null,
+                'probation_start_date' => $validated['probation_start_date'] ?? null,
+                'probation_period' => $validated['probation_period'] ?? null,
+                'department_id' => $department->id,
+                'manager_id' => $validated['manager_id'] ?? null,
+                'employment_start_date' => $validated['employment_start_date'] ?? null,
+                'employment_end_date' => $validated['employment_end_date'] ?? null,
+                'image' => $imagePath,
                 'account_holder_name' => $validated['account_holder_name'],
                 'bank_name' => $validated['bank_name'],
                 'account_no' => $validated['account_number'],
                 'branch_name' => $validated['branch_name'] ?? null,
-                'department_id' => $department ? $department->id : null,
-                'image' => $imagePath,
                 'epf_no' => $validated['epf_no'],
                 'basic' => $validated['basic'],
                 'budget_allowance' => $validated['budget_allowance'] ?? null,

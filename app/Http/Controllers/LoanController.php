@@ -189,6 +189,8 @@ class LoanController extends Controller
         return redirect()->route('advance.management')->with('success', 'Loan record deleted successfully.');
     }
 
+    
+
     /**
      * Calculate monthly payment based on employee ID
      * Employee ID 3 and 5 get 5000, others get 2500
