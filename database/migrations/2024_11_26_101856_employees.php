@@ -38,6 +38,7 @@ return new class extends Migration
             $table->string('bank_name')->nullable();
             $table->string('account_no')->nullable();
             $table->string('branch_name')->nullable();
+            $table->unsignedBigInteger('loan_monthly_instalment')->nullable();
             $table->timestamps();
             $table->foreign('department_id')->references('id')->on('departments')->onDelete('set null');
             $table->foreign('manager_id')->references('id')->on('employees')->onDelete('set null');

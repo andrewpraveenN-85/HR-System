@@ -39,6 +39,8 @@ class Employee extends Model
         'bank_name',
         'account_no',
         'branch_name',
+        'loan_monthly_instalment',
+        'status',
         'epf_no',
         'basic',
         'budget_allowance',
@@ -143,7 +145,7 @@ class Employee extends Model
         
         $leaveYearStart = $this->leave_year_start 
             ? Carbon::parse($this->leave_year_start) 
-            : Carbon::parse($this->employment_start_date ?? '2024-01-01');
+            : ($this->employment_start_date ? Carbon::parse($this->employment_start_date) : Carbon::now()->startOfYear());
 
         // Annual allocations
         $annualLeaveTotal = 21; // 21 days per year
@@ -189,7 +191,7 @@ class Employee extends Model
     {
         $leaveYearStart = $this->leave_year_start 
             ? Carbon::parse($this->leave_year_start) 
-            : Carbon::parse($this->employment_start_date ?? '2024-01-01');
+            : ($this->employment_start_date ? Carbon::parse($this->employment_start_date) : Carbon::now()->startOfYear());
 
         // Annual allocations
         $annualLeaveTotal = 21; // 21 days per year

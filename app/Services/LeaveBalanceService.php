@@ -27,7 +27,7 @@ class LeaveBalanceService
         // Get the leave year start date
         $leaveYearStart = $employee->leave_year_start 
             ? Carbon::parse($employee->leave_year_start) 
-            : Carbon::parse($employee->employment_start_date ?? '2024-01-01');
+            : ($employee->employment_start_date ? Carbon::parse($employee->employment_start_date) : Carbon::now()->startOfYear());
 
         // Annual leave allocation (21 days)
         $annualLeaveTotal = 21;
@@ -140,7 +140,7 @@ class LeaveBalanceService
 
         $leaveYearStart = $employee->leave_year_start 
             ? Carbon::parse($employee->leave_year_start) 
-            : Carbon::parse($employee->employment_start_date ?? '2024-01-01');
+            : ($employee->employment_start_date ? Carbon::parse($employee->employment_start_date) : Carbon::now()->startOfYear());
 
         $annualLeaveTotal = 21;
         $shortLeaveTotal = 36;

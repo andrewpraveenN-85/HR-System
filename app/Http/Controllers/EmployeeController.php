@@ -76,7 +76,7 @@ class EmployeeController extends Controller
     public function update(Request $request, $id)
     {
         $employee = Employee::findOrFail($id);
-        $education = Education::findOrFail($employee->education_id);
+        $education = $employee->education_id ? Education::findOrFail($employee->education_id) : null;
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
@@ -117,6 +117,7 @@ class EmployeeController extends Controller
             'car_allowance' => 'nullable|numeric|min:0',
             'production_bonus' => 'nullable|numeric|min:0',
             'stamp_duty' => 'nullable|numeric|min:0',
+            'loan_monthly_instalment' => 'nullable|numeric|min:0',
             'degree' => 'nullable|string|max:255',
             'institution' => 'nullable|string|max:255',
             'graduation_year' => 'nullable|integer',
@@ -166,19 +167,21 @@ class EmployeeController extends Controller
 
         $employee->legal_documents = !empty($newFiles) ? json_encode(array_values(array_unique(array_merge($remainingFiles, $newFiles)))) : null;
 
-        // Update education
-        $education->update([
-            'degree' => $validated['degree'],
-            'institution' => $validated['institution'],
-            'graduation_year' => $validated['graduation_year'],
-            'work_experience_years' => $validated['work_experience_years'],
-            'work_experience_role' => $validated['work_experience_role'],
-            'work_experience_company' => $validated['work_experience_company'],
-            'course_name' => $validated['course_name'],
-            'training_provider' => $validated['training_provider'],
-            'completion_date' => $validated['completion_date'],
-            'certification_status' => $validated['certification_status'] ?? null,
-        ]);
+        // Update education if exists
+        if ($education) {
+            $education->update([
+                'degree' => $validated['degree'] ?? null,
+                'institution' => $validated['institution'] ?? null,
+                'graduation_year' => $validated['graduation_year'] ?? null,
+                'work_experience_years' => $validated['work_experience_years'] ?? null,
+                'work_experience_role' => $validated['work_experience_role'] ?? null,
+                'work_experience_company' => $validated['work_experience_company'] ?? null,
+                'course_name' => $validated['course_name'] ?? null,
+                'training_provider' => $validated['training_provider'] ?? null,
+                'completion_date' => $validated['completion_date'] ?? null,
+                'certification_status' => $validated['certification_status'] ?? null,
+            ]);
+        }
 
         // Find department
         $department = Department::where('name', $validated['name'])
@@ -209,7 +212,7 @@ class EmployeeController extends Controller
             'probation_period' => $validated['probation_period'],
             'department_id' => $department->id,
             'manager_id' => $validated['manager_id'],
-            'education_id' => $education->id,
+            'education_id' => $education ? $education->id : $employee->education_id,
             'employment_start_date' => $validated['employment_start_date'],
             'employment_end_date' => $validated['employment_end_date'],
             'status' => $validated['status'],
@@ -222,6 +225,7 @@ class EmployeeController extends Controller
             'car_allowance' => $validated['car_allowance'] ?? null,
             'production_bonus' => $validated['production_bonus'] ?? null,
             'stamp_duty' => $validated['stamp_duty'] ?? 25.00,
+            'loan_monthly_instalment' => $validated['loan_monthly_instalment'] ?? 0.00,
         ]);
 
         // Update bank details
@@ -255,7 +259,6 @@ class EmployeeController extends Controller
             'description' => 'nullable|string|max:255',
             'branch' => 'required|string',
             'name' => 'required|string',
-            'department_id' => 'required|string|max:255',
             'probation_start_date' => 'nullable|date',
             'probation_period' => 'nullable|integer|min:1',
             'manager_id' => $isFirstEmployee ? 'nullable|exists:employees,id' : 'required|exists:employees,id',
@@ -276,6 +279,7 @@ class EmployeeController extends Controller
             'car_allowance' => 'nullable|numeric|min:0',
             'production_bonus' => 'nullable|numeric|min:0',
             'stamp_duty' => 'nullable|numeric|min:0',
+            'loan_monthly_instalment' => 'nullable|numeric|min:0',
         ]);
 
         $imagePath = null;
@@ -338,6 +342,18 @@ class EmployeeController extends Controller
                 'car_allowance' => $validated['car_allowance'] ?? null,
                 'production_bonus' => $validated['production_bonus'] ?? null,
                 'stamp_duty' => $validated['stamp_duty'] ?? 25.00,
+                'loan_monthly_instalment' => $validated['loan_monthly_instalment'] ?? 0.00,
+                'leave_year_start' => !empty($validated['employment_start_date'])
+                    ? Carbon::parse($validated['employment_start_date'])->startOfYear() 
+                    : Carbon::now()->startOfYear(),
+                'annual_leave_balance' => 21,
+                'annual_leave_used' => 0,
+                'short_leave_balance' => 36,
+                'short_leave_used' => 0,
+                'monthly_leaves_used' => 0,
+                'monthly_half_leaves_used' => 0,
+                'monthly_short_leaves_used' => 0,
+                'last_monthly_reset' => Carbon::now()->format('Y-m'),
             ]);
 
             // Update bank details
@@ -355,9 +371,12 @@ class EmployeeController extends Controller
 
             Log::error('Failed to create employee record', [
                 'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
+                'line' => $exception->getLine(),
+                'file' => $exception->getFile(),
             ]);
 
-            return redirect()->back()->withErrors(['error' => 'Failed to add the employee. Please try again.'])->withInput();
+            return redirect()->back()->withErrors(['error' => 'Failed to add the employee. Error: ' . $exception->getMessage()])->withInput();
         }
     }
 

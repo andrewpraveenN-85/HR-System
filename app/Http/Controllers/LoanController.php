@@ -42,8 +42,10 @@ class LoanController extends Controller
         $loan_start_date = \Carbon\Carbon::parse($request->loan_start_date);
         $loan_amount = $request->loan_amount; 
 
-        // Calculate monthly payment based on employee ID
-        $monthly_payment = $this->calculateMonthlyPayment($employee->employee_id);
+        // Use employee's loan_monthly_instalment if set, otherwise calculate based on employee ID
+        $monthly_payment = $employee->loan_monthly_instalment && $employee->loan_monthly_instalment > 0 
+            ? $employee->loan_monthly_instalment 
+            : $this->calculateMonthlyPayment($employee->employee_id);
         
         // Calculate loan end date and remaining balance
         $loan_calculation = $this->calculateLoanDetails($loan_amount, $monthly_payment, $loan_start_date);
@@ -116,7 +118,10 @@ class LoanController extends Controller
         $loan_start_date = \Carbon\Carbon::parse($request->loan_start_date);
         $loan_amount = $request->loan_amount; 
         
-        $monthly_payment = $this->calculateMonthlyPayment($employee->employee_id);
+        // Use employee's loan_monthly_instalment if set, otherwise calculate based on employee ID
+        $monthly_payment = $employee->loan_monthly_instalment && $employee->loan_monthly_instalment > 0 
+            ? $employee->loan_monthly_instalment 
+            : $this->calculateMonthlyPayment($employee->employee_id);
         //$loan_duration_months = (int)$request->duration; 
         //$loan_amount = $request->loan_amount; 
         // $annual_interest_rate = $request->interest_rate; 

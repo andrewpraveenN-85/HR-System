@@ -264,6 +264,10 @@
                         <label for="stamp_duty" class="text-xl font-semibold">Stamp Duty</label>
                         <input id="stamp_duty" name="stamp_duty" type="number" step="0.01" min="0" value="{{ old('stamp_duty', $employee->stamp_duty ?? 25.00) }}" class="input-field">
                     </div>
+                    <div class="flex flex-col space-y-2">
+                        <label for="loan_monthly_instalment" class="text-xl font-semibold">Loan Monthly Instalment</label>
+                        <input id="loan_monthly_instalment" name="loan_monthly_instalment" type="number" step="0.01" min="0" value="{{ old('loan_monthly_instalment', $employee->loan_monthly_instalment ?? 0.00) }}" class="input-field">
+                    </div>
                 </div>
             </div>
         </div>

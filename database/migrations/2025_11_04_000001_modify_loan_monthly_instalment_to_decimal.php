@@ -6,23 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('employees', function (Blueprint $table) {
-            $table->dropColumn('loan_deduction');
+            $table->decimal('loan_monthly_instalment', 10, 2)->nullable()->change();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('employees', function (Blueprint $table) {
-            $table->decimal('loan_deduction', 10, 2)->default(2500.00)->after('stamp_duty');
+            $table->unsignedBigInteger('loan_monthly_instalment')->nullable()->change();
         });
     }
 };

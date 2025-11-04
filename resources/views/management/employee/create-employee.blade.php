@@ -185,12 +185,6 @@
     </div>
 
     <div>
-        <label for="department_id" class="text-xl font-bold">Department ID</label>
-        <input type="text" id="department_id" name="department_id" placeholder="Enter Department ID"
-            class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required>
-    </div>
-
-    <div>
         <label for="name" class="text-xl font-bold">Department</label>
         <select name="name" id="name"
             class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" required>
@@ -240,6 +234,12 @@
                 <div>
                     <input type="text" name="probation_period" placeholder="Enter Probation Period" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]" />
                 </div>
+
+    <div>
+        <label for="employment_start_date" class="text-xl font-bold">Employment Start Date</label>
+        <input type="date" id="employment_start_date" name="employment_start_date" 
+            class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
+    </div>
             </div>
 
 
@@ -331,6 +331,11 @@
             <label for="stamp_duty" class="text-xl font-bold">Stamp Duty</label>
             <input type="number" id="stamp_duty" name="stamp_duty" placeholder="Enter Stamp Duty" value="25.00" min="0" step="0.01" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
             <span class="text-sm font-normal text-[#00000080]">Default value is 25.00. Adjust if needed.</span>
+        </div>
+
+        <div class="flex flex-col space-y-2">
+            <label for="loan_monthly_instalment" class="text-xl font-bold">Loan Monthly Instalment</label>
+            <input type="number" id="loan_monthly_instalment" name="loan_monthly_instalment" placeholder="Enter Loan Monthly Instalment" value="0.00" min="0" step="0.01" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#52B69A]">
         </div>
     </div>
 </div>

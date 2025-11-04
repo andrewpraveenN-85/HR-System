@@ -266,10 +266,15 @@
     </div>-->
 <div class="w-full flex flex-col h-auto space-y-8 p-8 bg-[#D9D9D980] rounded-3xl nunito cursor-pointer mt-4">
     <div class="w-full flex pl-8">
-        <p class="text-3xl font-bold text-black">Bank Details</p>
+        <p class="text-3xl font-bold text-black">Employment Details</p>
     </div>
 
     <div class="w-full flex flex-col space-y-4 pl-8 text-black">
+        <div class="flex items-center space-x-4">
+            <i class="ri-calendar-line text-xl"></i>
+            <span class="text-xl font-semibold w-48">Employment Start Date:</span>
+            <span class="text-xl text-gray-700">{{ $employee->employment_start_date ? \Carbon\Carbon::parse($employee->employment_start_date)->format('d M Y') : 'N/A' }}</span>
+        </div>
         <!-- Account Holder Name -->
         <div class="flex items-center space-x-4">
             <i class="ri-info-card-fill text-xl"></i>
@@ -360,6 +365,11 @@
                 @endphp
                 {{ $gross > 0 ? number_format($gross, 2) : 'N/A' }}
             </span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <i class="ri-money-dollar-circle-line text-xl"></i>
+            <span class="w-48 text-xl font-semibold">Loan Monthly Instalment:</span>
+            <span class="text-xl">{{ $employee->loan_monthly_instalment ? number_format($employee->loan_monthly_instalment, 2) : 'N/A' }}</span>
         </div>
     </div>
 </div>

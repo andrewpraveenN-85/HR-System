@@ -24,7 +24,7 @@ return new class extends Migration
             
             // Reset tracking
             $table->string('last_monthly_reset')->nullable()->after('monthly_short_leaves_used');
-            $table->date('leave_year_start')->default('2024-01-01')->after('last_monthly_reset');
+            $table->date('leave_year_start')->after('last_monthly_reset');
         });
     }
 
