@@ -120,15 +120,16 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
             file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . ' Missing required fields: EmpId or AttTime - ' . json_encode($data, JSON_PRETTY_PRINT) . ' end' . PHP_EOL, FILE_APPEND);
             return response()->json(['error' => 'Missing required fields: EmpId or AttTime'], 400);
         }
+        
+        $employee = Employee::where('employee_id', $entry['EmpId'])->first();
 
-        $employeeId  = $entry['EmpId'];
-        $attFullData = $entry['AttTime'];
-
-        $employee = Employee::find($employeeId);
         if (!$employee) {
-            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . " Employee ID {$employeeId} not found" . PHP_EOL, FILE_APPEND);
-            return response()->json(['error' => "Employee ID {$employeeId} not found"], 404);
+            file_put_contents(storage_path('logs/error_attendance_payload.log'), now() . " Employee ID {$entry['EmpId']} not found" . PHP_EOL, FILE_APPEND);
+            return response()->json(['error' => "Employee ID {$entry['EmpId']} not found"], 404);
         }
+
+        $employeeId = $employee->id; // the actual ID from employees table
+        $attFullData = $entry['AttTime'];
 
         // Parse the datetime
         $attDT   = Carbon::parse($attFullData);
