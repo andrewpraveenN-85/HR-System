@@ -11,15 +11,18 @@
         @method('PUT')
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label for="employment_ID" class="block text-xl text-black font-bold">Employee ID:</label>
-            <input
-              type="text"
+            <label for="employment_ID" class="block text-xl text-black font-bold">Employee:</label>
+            <select
               id="employment_ID"
               name="employment_ID"
-              value="{{ $advance->employment_ID }}"
-              placeholder="Enter the employment ID"
-              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
+              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+              <option value="">Select Employee</option>
+              @foreach($employees as $emp)
+                <option value="{{ $emp->employee_id }}" {{ $advance->employment_ID == $emp->employee_id ? 'selected' : '' }}>
+                  {{ $emp->employee_id }} - {{ $emp->full_name }}
+                </option>
+              @endforeach
+            </select>
           </div>
 
           <div>
@@ -156,6 +159,19 @@
     opacity: 1;
   }
 </style>
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $('#employment_ID').select2({
+        placeholder: 'Select Employee',
+        allowClear: true,
+        width: '100%'
+    });
+});
+</script>
+@endpush
+
 <script>
   document.getElementById('close-button').addEventListener('click', function () {
     document.getElementById('modal-container').style.display = 'none';

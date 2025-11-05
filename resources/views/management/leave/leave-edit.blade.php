@@ -25,19 +25,19 @@
         <div class="grid grid-cols-4 gap-4 text-sm">
           <div class="bg-blue-100 p-2 rounded">
             <strong>Annual Leaves</strong><br>
-            <span id="annual-remaining">{{ $leave->employee->annual_leave_balance - $leave->employee->annual_leave_used }}</span> remaining
+            <span id="annual-remaining">{{ $leave->employee ? ($leave->employee->annual_leave_balance - $leave->employee->annual_leave_used) : 0 }}</span> remaining
           </div>
           <div class="bg-green-100 p-2 rounded">
             <strong>Short Leaves</strong><br>
-            <span id="short-remaining">{{ $leave->employee->short_leave_balance - $leave->employee->short_leave_used }}</span> remaining
+            <span id="short-remaining">{{ $leave->employee ? ($leave->employee->short_leave_balance - $leave->employee->short_leave_used) : 0 }}</span> remaining
           </div>
           <div class="bg-yellow-100 p-2 rounded">
             <strong>Monthly Leaves</strong><br>
-            <span id="monthly-remaining">{{ 2 - $leave->employee->monthly_leaves_used }}</span> remaining
+            <span id="monthly-remaining">{{ $leave->employee ? (2 - $leave->employee->monthly_leaves_used) : 0 }}</span> remaining
           </div>
           <div class="bg-purple-100 p-2 rounded">
             <strong>Monthly Half Leaves</strong><br>
-            <span id="half-remaining">{{ 1 - $leave->employee->monthly_half_leaves_used }}</span> remaining
+            <span id="half-remaining">{{ $leave->employee ? (1 - $leave->employee->monthly_half_leaves_used) : 0 }}</span> remaining
           </div>
         </div>
       </div>
@@ -51,17 +51,33 @@
           
 
           <div>
-            <label for="employment_ID" class="block text-xl text-black font-bold">Employee ID:</label>
-            <input
-              type="text"
+            <label for="employment_ID" class="block text-xl text-black font-bold">Employee:</label>
+            <select
               id="employment_ID"
               name="employment_ID"
-              value="{{ $leave->employment_ID }}"
-              placeholder="Enter employee id"
-              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              onblur="fetchEmployeeData()"
-            />
+              required
+              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 text-[#0000008C] font-bold select2"
+              onchange="fetchEmployeeData()"
+            >
+              <option value="">Select Employee</option>
+              @foreach($employees as $employee)
+                <option value="{{ $employee->employee_id }}" {{ $leave->employment_ID == $employee->employee_id ? 'selected' : '' }}>
+                  {{ $employee->employee_id }} - {{ $employee->full_name }}
+                </option>
+              @endforeach
+            </select>
           </div>
+          @push('scripts')
+          <script>
+          $(document).ready(function() {
+              $('#employment_ID').select2({
+                  placeholder: "Select Employee",
+                  allowClear: true,
+                  width: '100%'  
+              });
+          });
+          </script>
+          @endpush
 
           <div>
             <label for="leave_type" class="block text-xl text-black font-bold">Leave Type</label>
@@ -272,11 +288,14 @@
   }
 </style>
 <script>
-let employeeData = @json([
-    'employee' => $leave->employee,
-    'balances' => $leave->employee->getLeaveBalances(),
-    'recent_leaves' => $leave->employee->leaves()->orderBy('created_at', 'desc')->limit(10)->get()
-]);
+@php
+    $employeeDataForJS = [
+        'employee' => $leave->employee ?? null,
+        'balances' => $leave->employee ? $leave->employee->getLeaveBalances() : [],
+        'recent_leaves' => $leave->employee ? $leave->employee->leaves()->orderBy('created_at', 'desc')->limit(10)->get() : []
+    ];
+@endphp
+let employeeData = @json($employeeDataForJS);
 
 function fetchEmployeeData() {
     const employeeId = document.getElementById('employment_ID').value;

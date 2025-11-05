@@ -93,7 +93,8 @@ class LoanController extends Controller
     public function edit($id)
     {
         $advance = Loan::with('employee')->findOrFail($id);
-        return view('management.advance.advance-edit', compact('advance'));
+        $employees = Employee::all();
+        return view('management.advance.advance-edit', compact('advance', 'employees'));
     }
 
     public function update(Request $request, $id)

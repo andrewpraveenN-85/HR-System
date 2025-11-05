@@ -12,9 +12,10 @@ use Carbon\Carbon;
 class LeaveController extends Controller
 {
     public function create()
-{
-    return view('management.leave.leave-create'); 
-}
+    {
+        $employees = Employee::all();
+        return view('management.leave.leave-create', compact('employees')); 
+    }
 
     /**
      * Get employee leave data via AJAX
@@ -136,8 +137,9 @@ public function store(Request $request)
 
     public function edit($id)
     {
-        $leave = Leave::with('employee')->findOrFail($id);
-        return view('management.leave.leave-edit', compact('leave'));
+        $leave = Leave::with(['employee', 'employee.department'])->findOrFail($id);
+        $employees = Employee::all();
+        return view('management.leave.leave-edit', compact('leave', 'employees'));
     }
  
     public function update(Request $request, $id)

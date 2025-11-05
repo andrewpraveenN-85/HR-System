@@ -538,7 +538,7 @@ function openEditModal(advanceId) {
     selectedFiles = new DataTransfer();
     existingFilesList = [];
 
-    fetch(`${window.location.origin}/dashboard/newadvance/${advancesId}/edit`)
+    fetch(`${window.location.origin}/dashboard/newadvance/${advanceId}/edit`)
         .then(response => response.text())
         .then(html => {
             modalContent.innerHTML = html;

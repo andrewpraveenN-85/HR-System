@@ -21,16 +21,32 @@
 
           <!-- Claim Date -->
           <div>
-            <label for="employee_id" class="block text-xl text-black font-bold">Employee ID :</label>
-            <input
-              type="text"
+            <label for="employee_id" class="block text-xl text-black font-bold">Employee:</label>
+            <select
               id="employee_id"
-               name="employee_id"
-              value="{{ old('employee_id', $employee->id) }}"
-              placeholder="Enter the date here"
-              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            />
+              name="employee_id"
+              required
+              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md focus:ring-blue-500 focus:border-blue-500 text-[#0000008C] font-bold select2"
+            >
+              <option value="">Select Employee</option>
+              @foreach($employees as $emp)
+                <option value="{{ $emp->id }}" {{ old('employee_id', $employee->id) == $emp->id ? 'selected' : '' }}>
+                  {{ $emp->employee_id }} - {{ $emp->full_name }}
+                </option>
+              @endforeach
+            </select>
           </div>
+          @push('scripts')
+          <script>
+          $(document).ready(function() {
+              $('#employee_id').select2({
+                  placeholder: "Select Employee",
+                  allowClear: true,
+                  width: '100%'  
+              });
+          });
+          </script>
+          @endpush
 
           <!-- Amount -->
           <div>

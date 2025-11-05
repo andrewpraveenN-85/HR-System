@@ -86,7 +86,8 @@ class AdvanceController extends Controller
     public function edit($id)
     {
         $advance = Advance::with('employee')->findOrFail($id);
-        return view('newadvance.newadvance-edit', compact('advance'));
+        $employees = Employee::all();
+        return view('management.newadvance.edit', compact('advance', 'employees'));
     }
 
     /**

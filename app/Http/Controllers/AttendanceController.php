@@ -15,10 +15,10 @@ class AttendanceController extends Controller
     public function create()
     {
         // Fetch all employees to associate with the attendance record
-        //$employees = Employee::all();
+        $employees = Employee::all();
 
         // Return the view to create a new attendance record
-        return view('management.attendance.attendance-create');
+        return view('management.attendance.attendance-create', compact('employees'));
     }
     public function edit($id)
     {
@@ -27,9 +27,12 @@ class AttendanceController extends Controller
 
         // Retrieve the employee associated with this attendance record
         $employee = Employee::findOrFail($attendance->employee_id); // Assuming `employee_id` exists in the attendance table
+        
+        // Fetch all employees for dropdown
+        $employees = Employee::all();
         //  dd($employee);
         // Return the edit view with both attendance and employee data
-        return view('management.attendance.attendance-edit', compact('attendance', 'employee'));
+        return view('management.attendance.attendance-edit', compact('attendance', 'employee', 'employees'));
     }
 
     /*   public function store(Request $request)
