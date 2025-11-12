@@ -151,8 +151,20 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
                 ->first();
                 
           if ($openPrev) {
+                    // Check if 30 minutes have passed since clock-in
                     $clockInDT  = Carbon::parse($openPrev->date . ' ' . $openPrev->clock_in_time);
                     $clockOutDT = $attDT->copy();
+                    
+                    $minutesSinceClockIn = $clockInDT->diffInMinutes($clockOutDT);
+                    if ($minutesSinceClockIn < 30) {
+                        Log::info('Ignoring check-out: less than 30 minutes since check-in (cross-midnight)', [
+                            'Employee' => $employeeId,
+                            'ClockIn' => $clockInDT,
+                            'AttemptedCheckOut' => $clockOutDT,
+                            'MinutesSince' => $minutesSinceClockIn
+                        ]);
+                        continue;
+                    }
 
                     $cutoff = Carbon::parse($openPrev->date . ' 08:30:00');
                     $startCount = $clockInDT->lessThan($cutoff) ? $cutoff->copy() : $clockInDT->copy();
@@ -207,9 +219,36 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
                 continue;
             }
 
-        // Subsequent clock-out
+        // Subsequent clock-out - Check if 30 minutes have passed since clock-in
             $clockInDT  = Carbon::parse($attendanceRecord->date . ' ' . $attendanceRecord->clock_in_time);
             $clockOutDT = $attDT->copy();
+
+            $minutesSinceClockIn = $clockInDT->diffInMinutes($clockOutDT);
+            if ($minutesSinceClockIn < 30) {
+                Log::info('Ignoring check-out: less than 30 minutes since check-in', [
+                    'Employee' => $employeeId,
+                    'ClockIn' => $clockInDT,
+                    'AttemptedCheckOut' => $clockOutDT,
+                    'MinutesSince' => $minutesSinceClockIn
+                ]);
+                continue;
+            }
+
+            // Check if 30 minutes have passed since last clock-out (if exists)
+            if ($attendanceRecord->clock_out_time) {
+                $lastClockOutDT = Carbon::parse($attendanceRecord->date . ' ' . $attendanceRecord->clock_out_time);
+                $minutesSinceLastClockOut = $lastClockOutDT->diffInMinutes($clockOutDT);
+                
+                if ($minutesSinceLastClockOut < 30) {
+                    Log::info('Ignoring check-out: less than 30 minutes since last check-out', [
+                        'Employee' => $employeeId,
+                        'LastClockOut' => $lastClockOutDT,
+                        'AttemptedCheckOut' => $clockOutDT,
+                        'MinutesSince' => $minutesSinceLastClockOut
+                    ]);
+                    continue;
+                }
+            }
 
             $cutoff = Carbon::parse($attendanceRecord->date . ' 08:30:00');
             $startCount = $clockInDT->lessThan($cutoff) ? $cutoff->copy() : $clockInDT->copy();
