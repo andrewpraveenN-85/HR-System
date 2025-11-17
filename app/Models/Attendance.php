@@ -27,4 +27,56 @@ class Attendance extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
+
+    /**
+     * Get formatted total work hours
+     */
+    public function getTotalWorkHoursAttribute($value)
+    {
+        if (is_null($value)) {
+            return null;
+        }
+        
+        $hours = floor($value / 3600);
+        $minutes = floor(($value % 3600) / 60);
+        $seconds = $value % 60;
+        
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
+
+    /**
+     * Get formatted overtime hours
+     */
+    public function getOvertimeHoursAttribute()
+    {
+        $value = $this->overtime_seconds;
+        
+        if (is_null($value)) {
+            return null;
+        }
+        
+        $hours = floor($value / 3600);
+        $minutes = floor(($value % 3600) / 60);
+        $seconds = $value % 60;
+        
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
+
+    /**
+     * Get formatted late by time
+     */
+    public function getLateByAttribute()
+    {
+        $value = $this->late_by_seconds;
+        
+        if (is_null($value) || $value == 0) {
+            return null;
+        }
+        
+        $hours = floor($value / 3600);
+        $minutes = floor(($value % 3600) / 60);
+        $seconds = $value % 60;
+        
+        return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
 }

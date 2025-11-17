@@ -192,7 +192,11 @@
     </ol>
   </nav>
 
-  <div class="w-full flex justify-end items-end pt-2 pb-2">
+  <div class="w-full flex justify-end items-end pt-2 pb-2 gap-4">
+    <button id="import-attendance-btn" class="flex items-center justify-center space-x-2 px-6 py-2 text-white bg-[#52B69A] border-2 border-[#52B69A] text-2xl rounded-xl shadow-sm hover:bg-[#3A9D84]">
+          <span class="iconify" data-icon="mdi:file-excel" style="font-size: 24px;"></span>
+          <span>Import Attendance</span>
+      </button>
     <button id="print-table" class="flex items-center justify-center space-x-2 px-6 py-2 text-[#184E77] border-2 border-[#184E77] text-2xl bg-white rounded-xl shadow-sm hover:from-[#1B5A8A] hover:to-[#60C3A8]">
           <span>Generate Report</span>
       </button>
@@ -292,7 +296,7 @@
           checkOut: '{{ $record->clock_out_time }}',
           totalWorkHours: '{{ $record->total_work_hours }}',
           overtimeHours: '{{ $record->overtime_hours }}',
-          lateBy: '{{ $record->late_by_hours }}',
+          lateBy: '{{ $record->late_by }}',
           date: '{{ $record->date }}'
 
               })">
@@ -380,6 +384,189 @@
   </div>
   </div>
 <!--View record form end-->
+
+<!-- Import Attendance Modal -->
+<div id="import-attendance-modal" class="fixed inset-0 bg-black bg-opacity-50 w-full opacity-0 transition-opacity duration-300 flex justify-center items-center hidden z-50">
+  <div class="w-1/2 flex flex-col justify-start items-center relative bg-white nunito- p-8 rounded-3xl">
+    <button id="close-import-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+      <span class="iconify" data-icon="mdi:close" style="font-size: 24px;"></span>
+    </button>
+    
+    <h2 class="text-3xl font-bold text-[#184E77] mb-6">Import Attendance Records</h2>
+    
+    <form id="import-attendance-form" action="{{ route('attendance.import') }}" method="POST" enctype="multipart/form-data" class="w-full">
+      @csrf
+      
+      <div class="mb-6">
+        <label class="block text-xl font-semibold text-gray-700 mb-2">
+          Select Excel Files (.xls or .xlsx)
+        </label>
+        <input 
+          type="file" 
+          name="attendance_files[]" 
+          id="attendance_files"
+          accept=".xls,.xlsx"
+          multiple
+          required
+          class="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:border-[#184E77]"
+        />
+        <p class="text-sm text-gray-500 mt-2">
+          Upload one or more attendance export files from the fingerprint machine.
+        </p>
+        <div id="file-list" class="mt-3 text-sm text-gray-600"></div>
+      </div>
+      
+      <div class="flex justify-end gap-4">
+        <button 
+          type="button" 
+          id="cancel-import-btn"
+          class="px-6 py-2 text-gray-700 bg-gray-200 rounded-xl hover:bg-gray-300"
+        >
+          Cancel
+        </button>
+        <button 
+          type="submit" 
+          class="px-6 py-2 text-white bg-[#52B69A] rounded-xl hover:bg-[#3A9D84]"
+        >
+          Import & Process
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Import Attendance Modal End -->
+
+<!-- Import Results Modal -->
+@if(session('import_results'))
+<div id="import-results-modal" class="fixed inset-0 bg-black bg-opacity-50 w-full flex justify-center items-center z-50">
+  <div class="w-3/4 max-h-[90vh] overflow-y-auto flex flex-col justify-start items-center relative bg-white nunito- p-8 rounded-3xl">
+    <button id="close-results-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+      <span class="iconify" data-icon="mdi:close" style="font-size: 24px;"></span>
+    </button>
+    
+    <h2 class="text-3xl font-bold text-[#184E77] mb-6">Import Results</h2>
+    
+    @php
+      $results = session('import_results');
+      $dateRanges = $results['dateRanges'] ?? [];
+      $filesProcessed = $results['filesProcessed'] ?? 0;
+      $totalFiles = $results['totalFiles'] ?? 0;
+    @endphp
+    
+    @if(!empty($dateRanges))
+    <div class="w-full mb-6 p-4 bg-blue-50 rounded-xl">
+      <p class="text-xl font-semibold text-gray-700 mb-2">
+        Files Processed: {{ $filesProcessed }} of {{ $totalFiles }}
+      </p>
+      @foreach($dateRanges as $rangeInfo)
+      <p class="text-md text-gray-600">
+        <strong>{{ $rangeInfo['file'] }}:</strong> {{ $rangeInfo['range']['start']->format('Y-m-d') }} to {{ $rangeInfo['range']['end']->format('Y-m-d') }}
+      </p>
+      @endforeach
+    </div>
+    @endif
+    
+    <!-- Summary -->
+    <div class="w-full grid grid-cols-3 gap-4 mb-6">
+      <div class="p-4 bg-green-100 rounded-xl text-center">
+        <p class="text-3xl font-bold text-green-700">{{ count($results['processed']) }}</p>
+        <p class="text-lg text-gray-700">Processed Successfully</p>
+      </div>
+      <div class="p-4 bg-yellow-100 rounded-xl text-center">
+        <p class="text-3xl font-bold text-yellow-700">{{ count($results['missing']) }}</p>
+        <p class="text-lg text-gray-700">Missing Data</p>
+      </div>
+      <div class="p-4 bg-red-100 rounded-xl text-center">
+        <p class="text-3xl font-bold text-red-700">{{ count($results['errors']) }}</p>
+        <p class="text-lg text-gray-700">Errors</p>
+      </div>
+    </div>
+    
+    <!-- Missing Records Details -->
+    @if(!empty($results['missing']))
+    <div class="w-full mb-6">
+      <h3 class="text-2xl font-bold text-yellow-700 mb-4">Records with Missing Data</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-300 px-4 py-2 text-left">Employee ID</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Employee Name</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Date</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Clock In</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Clock Out</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($results['missing'] as $record)
+            <tr class="hover:bg-gray-50">
+              <td class="border border-gray-300 px-4 py-2">{{ $record['employee_id'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['employee_name'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['date'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['clock_in'] ?? 'N/A' }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['clock_out'] ?? 'N/A' }}</td>
+              <td class="border border-gray-300 px-4 py-2 text-yellow-700">{{ $record['reason'] ?? 'Missing data' }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+    @endif
+    
+    <!-- Errors -->
+    @if(!empty($results['errors']))
+    <div class="w-full mb-6">
+      <h3 class="text-2xl font-bold text-red-700 mb-4">Errors</h3>
+      <div class="bg-red-50 p-4 rounded-xl">
+        <ul class="list-disc list-inside">
+          @foreach($results['errors'] as $error)
+          <li class="text-red-700">{{ $error }}</li>
+          @endforeach
+        </ul>
+      </div>
+    </div>
+    @endif
+    
+    <!-- Processed Records -->
+    @if(!empty($results['processed']))
+    <div class="w-full mb-6">
+      <h3 class="text-2xl font-bold text-green-700 mb-4">Successfully Processed Records</h3>
+      <div class="overflow-x-auto max-h-96">
+        <table class="w-full border-collapse border border-gray-300">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-300 px-4 py-2 text-left">Employee ID</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Employee Name</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Date</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Clock In</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Clock Out</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($results['processed'] as $record)
+            <tr class="hover:bg-gray-50">
+              <td class="border border-gray-300 px-4 py-2">{{ $record['employee_id'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['employee_name'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['date'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['clock_in'] }}</td>
+              <td class="border border-gray-300 px-4 py-2">{{ $record['clock_out'] }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+    @endif
+    
+    <button id="close-results-btn" class="px-6 py-2 text-white bg-[#184E77] rounded-xl hover:bg-[#0D3B5C]">
+      Close
+    </button>
+  </div>
+</div>
+@endif
+<!-- Import Results Modal End -->
 
 <script>
 
@@ -745,5 +932,92 @@
           menu.classList.add('hidden');
       });
   });
+
+  // Import Attendance Modal Handlers
+  const importBtn = document.getElementById('import-attendance-btn');
+  const importModal = document.getElementById('import-attendance-modal');
+  const closeImportModal = document.getElementById('close-import-modal');
+  const cancelImportBtn = document.getElementById('cancel-import-btn');
+  const attendanceFilesInput = document.getElementById('attendance_files');
+  const fileListDiv = document.getElementById('file-list');
+  
+  // Display selected files
+  if (attendanceFilesInput) {
+    attendanceFilesInput.addEventListener('change', (e) => {
+      const files = e.target.files;
+      if (files.length > 0) {
+        let fileListHTML = '<strong>Selected files:</strong><ul class="list-disc ml-5 mt-1">';
+        for (let i = 0; i < files.length; i++) {
+          const sizeKB = (files[i].size / 1024).toFixed(2);
+          fileListHTML += `<li>${files[i].name} (${sizeKB} KB)</li>`;
+        }
+        fileListHTML += '</ul>';
+        fileListDiv.innerHTML = fileListHTML;
+      } else {
+        fileListDiv.innerHTML = '';
+      }
+    });
+  }
+  
+  if (importBtn) {
+    importBtn.addEventListener('click', () => {
+      importModal.classList.remove('hidden');
+      setTimeout(() => {
+        importModal.classList.remove('opacity-0');
+      }, 10);
+    });
+  }
+  
+  function closeImportModalHandler() {
+    importModal.classList.add('opacity-0');
+    setTimeout(() => {
+      importModal.classList.add('hidden');
+      // Reset file input and list
+      if (attendanceFilesInput) attendanceFilesInput.value = '';
+      if (fileListDiv) fileListDiv.innerHTML = '';
+    }, 300);
+  }
+  
+  if (closeImportModal) {
+    closeImportModal.addEventListener('click', closeImportModalHandler);
+  }
+  
+  if (cancelImportBtn) {
+    cancelImportBtn.addEventListener('click', closeImportModalHandler);
+  }
+  
+  // Import Results Modal Handlers
+  const resultsModal = document.getElementById('import-results-modal');
+  const closeResultsModal = document.getElementById('close-results-modal');
+  const closeResultsBtn = document.getElementById('close-results-btn');
+  
+  if (closeResultsModal) {
+    closeResultsModal.addEventListener('click', () => {
+      resultsModal.classList.add('hidden');
+    });
+  }
+  
+  if (closeResultsBtn) {
+    closeResultsBtn.addEventListener('click', () => {
+      resultsModal.classList.add('hidden');
+    });
+  }
+  
+  // Close modal when clicking outside
+  if (importModal) {
+    importModal.addEventListener('click', (e) => {
+      if (e.target === importModal) {
+        closeImportModalHandler();
+      }
+    });
+  }
+  
+  if (resultsModal) {
+    resultsModal.addEventListener('click', (e) => {
+      if (e.target === resultsModal) {
+        resultsModal.classList.add('hidden');
+      }
+    });
+  }
   </script>
 @endsection

@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Imports\AttendanceImport;
 
 use Carbon\Carbon;
 
@@ -283,5 +284,81 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
 
         Log::info('All attendance records processed successfully', $data);
         return response()->json(['message' => 'Records processed successfully'], 201);
+    }
+
+    /**
+     * Import attendance records from Excel file(s)
+     */
+    public function importAttendance(Request $request)
+    {
+        try {
+            $request->validate([
+                'attendance_files' => 'required|array|min:1',
+                'attendance_files.*' => 'file|mimes:xls,xlsx|max:10240'
+            ]);
+
+            $files = $request->file('attendance_files');
+            
+            // Initialize aggregated results
+            $allProcessed = [];
+            $allMissing = [];
+            $allErrors = [];
+            $dateRanges = [];
+            $filesProcessed = 0;
+
+            // Process each file
+            foreach ($files as $file) {
+                $filePath = $file->getRealPath();
+                $fileName = $file->getClientOriginalName();
+
+                // Process the import
+                $importer = new AttendanceImport();
+                $result = $importer->import($filePath);
+
+                if (!$result['success']) {
+                    $allErrors[] = "File '{$fileName}': " . $result['error'];
+                    continue;
+                }
+
+                // Aggregate results
+                $allProcessed = array_merge($allProcessed, $result['processed']);
+                $allMissing = array_merge($allMissing, $result['missing']);
+                $allErrors = array_merge($allErrors, $result['errors']);
+                
+                if (!empty($result['dateRange'])) {
+                    $dateRanges[] = [
+                        'file' => $fileName,
+                        'range' => $result['dateRange']
+                    ];
+                }
+                
+                $filesProcessed++;
+            }
+
+            // Store aggregated results in session for display
+            session()->flash('import_results', [
+                'processed' => $allProcessed,
+                'missing' => $allMissing,
+                'errors' => $allErrors,
+                'dateRanges' => $dateRanges,
+                'filesProcessed' => $filesProcessed,
+                'totalFiles' => count($files)
+            ]);
+
+            $message = "Processed {$filesProcessed} of " . count($files) . " file(s). ";
+            $message .= count($allProcessed) . ' records processed successfully.';
+            if (!empty($allMissing)) {
+                $message .= ' ' . count($allMissing) . ' records with missing data found.';
+            }
+            if (!empty($allErrors)) {
+                $message .= ' ' . count($allErrors) . ' errors occurred.';
+            }
+
+            return redirect()->route('attendance.management')->with('success', $message);
+
+        } catch (\Exception $e) {
+            Log::error('Attendance import error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
     }
 }

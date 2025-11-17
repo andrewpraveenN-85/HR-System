@@ -268,19 +268,10 @@ $todos = Todo::where('user_id', auth()->id())
     public function attendanceManagement()
     {
         // Fetch attendance records with employee details
-           $attendance = Attendance::with(['employee'])
-        ->where('date', '>', '2025-05-05')
-        ->get();
-    
-        // Transform the collection to format work hours, overtime, and late by duration
-        $attendance->transform(function ($record) {
-            $record->total_work_hours = $this->formatDuration($record->total_work_hours);
-            $record->overtime_hours = $this->formatDuration($record->overtime_seconds); // Ensure correct column name
-            $record->late_by = $this->formatDuration($record->late_by_seconds); // Ensure correct column name
-    
-         
-            return $record;
-        });
+        // Note: The Attendance model already has accessors that format durations
+        $attendance = Attendance::with(['employee'])
+            ->where('date', '>', '2025-05-05')
+            ->get();
     
         return view('management.attendance.attendance-management', compact('attendance'));
     }
