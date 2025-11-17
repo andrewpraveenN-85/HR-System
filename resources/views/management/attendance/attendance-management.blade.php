@@ -304,7 +304,7 @@
                   <li class="cursor-pointer" ><a onclick="openEditModal({{ $record->id}})"  class="block px-2 py-2 hover:bg-gray-100">Edit</a></li>
                   <li class="bg-red">
 
-                  <form action="{{ route('attendance.destroy', ['id' => $record->id]) }}" method="POST" class="m-0 p-0">
+                    <form action="{{ route('attendance.destroy', ['id' => $record->id]) }}" method="POST" class="m-0 p-0 delete-attendance-form" data-employee-name="{{ $record->employee->full_name }}" data-attendance-date="{{ $record->date }}">
   @csrf
               @method('DELETE')
               <button type="submit"
@@ -644,21 +644,6 @@
       const menu = document.getElementById(menuId);
       menu.classList.toggle('hidden');
     }
-    const textElements = document.querySelectorAll('span.text-xl');
-
-  textElements.forEach((element) => {
-      element.addEventListener('click', function () {
-          // Reset all text elements to black
-          textElements.forEach((el) => {
-              el.classList.remove('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-              el.classList.add('text-black');
-          });
-
-          // Apply gradient to the clicked element
-          this.classList.remove('text-black');
-          this.classList.add('bg-gradient-to-r', 'from-[#184E77]', 'to-[#52B69A]', 'text-transparent', 'bg-clip-text');
-      });
-  });
   // Initialize Flatpickr
 
 
@@ -1019,5 +1004,18 @@
       }
     });
   }
+
+  document.querySelectorAll('.delete-attendance-form').forEach((form) => {
+      form.addEventListener('submit', (event) => {
+          const employee = form.dataset.employeeName || 'this employee';
+          const date = form.dataset.attendanceDate ? ` on ${form.dataset.attendanceDate}` : '';
+          const message = `Are you sure you want to delete the attendance record for ${employee}${date}? This action cannot be undone.`;
+
+          if (!window.confirm(message)) {
+              event.preventDefault();
+              event.stopPropagation();
+          }
+      });
+  });
   </script>
 @endsection

@@ -14,6 +14,24 @@
       </div>
       <div class="w-full mx-auto p-6 ">
 
+    @php
+      $formatDuration = static function ($value, $default = '00:00:00') {
+        if ($value === null || $value === '') {
+          return $default;
+        }
+
+        if (is_numeric($value)) {
+          return gmdate('H:i:s', (int) $value);
+        }
+
+        if (is_string($value) && preg_match('/^\d{1,2}:\d{2}(?::\d{2})?$/', $value)) {
+          return strlen($value) === 5 ? $value . ':00' : $value;
+        }
+
+        return $default;
+      };
+    @endphp
+
     <form action="{{ route('attendance.update', $attendance->id) }}" method="POST" class="w-full mx-auto p-6 ">
         @csrf
         @method('PUT')
@@ -48,6 +66,30 @@
           </script>
           @endpush
 
+          <!-- Check In Date -->
+          <div>
+            <label for="clock_in_date" class="block text-xl text-black font-bold">Check In Date</label>
+            <input
+              type="date"
+              id="clock_in_date"
+              name="clock_in_date"
+              value="{{ old('clock_in_date', $attendance->date) }}"
+              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+
+          <!-- Check Out Date -->
+          <div>
+            <label for="clock_out_date" class="block text-xl text-black font-bold">Check Out Date</label>
+            <input
+              type="date"
+              id="clock_out_date"
+              name="clock_out_date"
+              value="{{ old('clock_out_date', $attendance->date) }}"
+              class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+
           <!-- Amount -->
           <div>
             <label for="clock_in_time" class="block text-xl text-black font-bold">Check In Time</label>
@@ -55,7 +97,7 @@
               type="time"
               id="clock_in_time"
               name="clock_in_time"
-              value="{{ old('clock_in_time', $attendance->clock_in_time) }}"
+              value="{{ old('clock_in_time', $attendance->clock_in_time ? substr($attendance->clock_in_time, 0, 5) : '') }}"
               placeholder="Enter the time"
               class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
@@ -68,7 +110,7 @@
               type="time"
               id="clock_out_time"
               name="clock_out_time"
-              value="{{ old('clock_out_time', \Carbon\Carbon::parse($attendance->clock_out_time)->format('H:i')) }}"              placeholder="Enter the Status"
+              value="{{ old('clock_out_time', $attendance->clock_out_time ? substr($attendance->clock_out_time, 0, 5) : '') }}"              placeholder="Enter the Status"
               class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             />
           </div>
@@ -81,9 +123,10 @@
         type="text"
         id="total_work_hours"
         name="total_work_hours"
-        value="{{ old('total_work_hours', gmdate('H:i:s', $attendance->total_work_hours ?? 0)) }}"
+        value="{{ old('total_work_hours', $formatDuration($attendance->total_work_hours)) }}"
         placeholder="HH:MM:SS"
         class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        readonly
     />
 </div>
 
@@ -94,9 +137,10 @@
         type="text"
         id="overtime_hours"
         name="overtime_hours"
-        value="{{ old('overtime_hours', gmdate('H:i:s', $attendance->overtime_seconds ?? 0)) }}"
+      value="{{ old('overtime_hours', $formatDuration($attendance->overtime_seconds)) }}"
         placeholder="HH:MM:SS"
         class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        readonly
     />
 </div>
 
@@ -107,9 +151,10 @@
         type="text"
         id="late_by"
         name="late_by"
-        value="{{ old('late_by', gmdate('H:i:s', $attendance->late_by_seconds ?? 0)) }}"
+      value="{{ old('late_by', $formatDuration($attendance->late_by_seconds)) }}"
         placeholder="HH:MM:SS"
         class="mt-1 block w-full px-3 py-2 border-2 border-[#1C1B1F80] rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+        readonly
     />
 </div>
 
@@ -158,57 +203,88 @@
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const checkInInput = document.getElementById("clock_in_time");
-    const checkOutInput = document.getElementById("clock_out_time");
-    const totalWorkInput = document.getElementById("total_work_hours");
+  const checkInDateInput = document.getElementById("clock_in_date");
+  const checkOutDateInput = document.getElementById("clock_out_date");
+  const checkInInput = document.getElementById("clock_in_time");
+  const checkOutInput = document.getElementById("clock_out_time");
+  const totalWorkInput = document.getElementById("total_work_hours");
+  const overtimeInput = document.getElementById("overtime_hours");
+  const lateByInput = document.getElementById("late_by");
 
-    function calculateWorkHours() {
-        const checkIn = checkInInput.value;
-        const checkOut = checkOutInput.value;
-        if (!checkIn || !checkOut) return;
+  const SHIFT_START = "08:30:00";
+  const SHIFT_END = "16:30:00";
 
-        const today = new Date().toISOString().split("T")[0];
-        const startLimit = new Date(`${today}T08:30:00`);
-        let clockIn = new Date(`${today}T${checkIn}`);
-        let clockOut = new Date(`${today}T${checkOut}`);
-
-        // ⏰ Cut off early arrivals (before 08:30)
-        if (clockIn < startLimit) {
-            clockIn = startLimit;
-        }
-
-        // 🕐 Handle cases like 09:30 → 06:30 (means 6:30 PM)
-        if (clockOut < clockIn) {
-            // Try adding 12 hours (likely 6:30 PM instead of 6:30 AM)
-            const plus12 = new Date(clockOut.getTime() + 12 * 60 * 60 * 1000);
-            const diff12 = (plus12 - clockIn) / 1000 / 3600;
-
-            if (diff12 > 0 && diff12 <= 12) {
-                clockOut = plus12; // use corrected time
-            } else {
-                // if still invalid, assume next day (overnight)
-                clockOut = new Date(clockOut.getTime() + 24 * 60 * 60 * 1000);
-            }
-        }
-
-        // ✅ Calculate work duration
-        const diffSeconds = (clockOut - clockIn) / 1000;
-        if (diffSeconds <= 0) {
-            totalWorkInput.value = "00:00:00";
-            return;
-        }
-
-        const hours = Math.floor(diffSeconds / 3600);
-        const minutes = Math.floor((diffSeconds % 3600) / 60);
-        const seconds = Math.floor(diffSeconds % 60);
-
-        totalWorkInput.value =
-            String(hours).padStart(2, "0") + ":" +
-            String(minutes).padStart(2, "0") + ":" +
-            String(seconds).padStart(2, "0");
+  const toDateTime = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue) {
+      return null;
     }
 
-    checkInInput.addEventListener("change", calculateWorkHours);
-    checkOutInput.addEventListener("change", calculateWorkHours);
+    const normalizedTime = timeValue.length === 5 ? `${timeValue}:00` : timeValue;
+    const [year, month, day] = dateValue.split("-").map(Number);
+    const [hours, minutes, seconds] = normalizedTime.split(":").map(Number);
+
+    return new Date(year, month - 1, day, hours, minutes, seconds || 0);
+  };
+
+  const secondsToHHMMSS = (seconds) => {
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return "00:00:00";
+    }
+
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
+  function calculateDerivedDurations() {
+    const clockInDT = toDateTime(checkInDateInput.value, checkInInput.value);
+    const clockOutDT = toDateTime(checkOutDateInput.value, checkOutInput.value);
+
+    if (!clockInDT || !clockOutDT) {
+      totalWorkInput.value = "00:00:00";
+      overtimeInput.value = "00:00:00";
+      lateByInput.value = "00:00:00";
+      return;
+    }
+
+    let adjustedClockOut = new Date(clockOutDT.getTime());
+
+    if (adjustedClockOut < clockInDT) {
+      adjustedClockOut = new Date(adjustedClockOut.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    const shiftStart = toDateTime(checkInDateInput.value, SHIFT_START);
+    const shiftEnd = toDateTime(checkInDateInput.value, SHIFT_END);
+
+    const workCountStart = shiftStart && clockInDT < shiftStart ? shiftStart : clockInDT;
+    const totalSeconds = Math.max(0, Math.round((adjustedClockOut - workCountStart) / 1000));
+    totalWorkInput.value = secondsToHHMMSS(totalSeconds);
+
+    let overtimeSeconds = 0;
+    if (shiftEnd && adjustedClockOut > shiftEnd) {
+      overtimeSeconds = Math.max(0, Math.round((adjustedClockOut - shiftEnd) / 1000));
+    }
+    overtimeInput.value = secondsToHHMMSS(overtimeSeconds);
+
+    let lateSeconds = 0;
+    if (shiftStart && clockInDT > shiftStart) {
+      lateSeconds = Math.max(0, Math.round((clockInDT - shiftStart) / 1000));
+    }
+    lateByInput.value = secondsToHHMMSS(lateSeconds);
+  }
+
+  [
+    checkInDateInput,
+    checkOutDateInput,
+    checkInInput,
+    checkOutInput
+  ].forEach((el) => {
+    el.addEventListener("change", calculateDerivedDurations);
+    el.addEventListener("keyup", calculateDerivedDurations);
+  });
+
+  calculateDerivedDurations();
 });
 </script>

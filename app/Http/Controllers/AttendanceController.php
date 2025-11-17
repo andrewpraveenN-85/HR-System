@@ -13,6 +13,8 @@ use Carbon\Carbon;
 
 class AttendanceController extends Controller
 {
+    private const SHIFT_START = '08:30:00';
+    private const SHIFT_END = '16:30:00';
     public function create()
     {
         // Fetch all employees to associate with the attendance record
@@ -34,6 +36,50 @@ class AttendanceController extends Controller
         //  dd($employee);
         // Return the edit view with both attendance and employee data
         return view('management.attendance.attendance-edit', compact('attendance', 'employee', 'employees'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $attendance = Attendance::findOrFail($id);
+
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'date' => 'required|date',
+            'clock_in_date' => 'nullable|date',
+            'clock_out_date' => 'nullable|date',
+            'clock_in_time' => 'nullable|date_format:H:i',
+            'clock_out_time' => 'nullable|date_format:H:i',
+        ]);
+
+        $clockInDate = $validated['clock_in_date'] ?? $validated['date'];
+        $clockOutDate = $validated['clock_out_date'] ?? $clockInDate;
+
+        $clockInDT = $this->combineDateAndTime($clockInDate, $validated['clock_in_time'] ?? null);
+        $clockOutDT = $this->combineDateAndTime($clockOutDate, $validated['clock_out_time'] ?? null);
+
+        $durations = $this->deriveManualDurations($clockInDT, $clockOutDT);
+
+        $attendance->update([
+            'employee_id' => $validated['employee_id'],
+            'date' => $validated['date'],
+            'clock_in_time' => $validated['clock_in_time'] ?? null,
+            'clock_out_time' => $validated['clock_out_time'] ?? null,
+            'total_work_hours' => $durations['total_work_seconds'],
+            'overtime_seconds' => $durations['overtime_seconds'],
+            'late_by_seconds' => $durations['late_by_seconds'],
+        ]);
+
+        return redirect()->route('attendance.management')->with('success', 'Attendance record updated successfully.');
+    }
+
+    public function destroy($id)
+    {
+        $attendance = Attendance::findOrFail($id);
+        $attendance->delete();
+
+        return redirect()
+            ->route('attendance.management')
+            ->with('success', 'Attendance record deleted successfully.');
     }
 
     /*   public function store(Request $request)
@@ -361,4 +407,52 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
             return redirect()->back()->with('error', 'Import failed: ' . $e->getMessage());
         }
     }
+
+    private function combineDateAndTime(?string $date, ?string $time): ?Carbon
+    {
+        if (!$date || !$time) {
+            return null;
+        }
+
+        return Carbon::createFromFormat('Y-m-d H:i', $date . ' ' . $time, config('app.timezone'));
+    }
+
+    private function deriveManualDurations(?Carbon $clockInDT, ?Carbon $clockOutDT): array
+    {
+        $result = [
+            'total_work_seconds' => null,
+            'overtime_seconds' => null,
+            'late_by_seconds' => null,
+        ];
+
+        if (!$clockInDT) {
+            return $result;
+        }
+
+        $shiftDate = $clockInDT->format('Y-m-d');
+        $shiftStart = Carbon::parse($shiftDate . ' ' . self::SHIFT_START, config('app.timezone'));
+
+        if ($clockInDT->greaterThan($shiftStart)) {
+            $result['late_by_seconds'] = $clockInDT->diffInSeconds($shiftStart);
+        }
+
+        if (!$clockOutDT) {
+            return $result;
+        }
+
+        $adjustedClockOut = $clockOutDT->copy();
+        if ($adjustedClockOut->lessThanOrEqualTo($clockInDT)) {
+            $adjustedClockOut->addDay();
+        }
+
+        $workCountStart = $clockInDT->lessThan($shiftStart) ? $shiftStart->copy() : $clockInDT->copy();
+        $result['total_work_seconds'] = $adjustedClockOut->lessThanOrEqualTo($workCountStart)
+            ? 0
+            : $workCountStart->diffInSeconds($adjustedClockOut);
+
+        $result['overtime_seconds'] = $this->calculateOvertimeSeconds($clockInDT->copy(), $adjustedClockOut->copy(), $shiftDate);
+
+        return $result;
+    }
+
 }
