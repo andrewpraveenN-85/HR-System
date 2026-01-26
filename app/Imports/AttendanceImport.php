@@ -47,95 +47,200 @@ class AttendanceImport
     public function import($filePath)
     {
         try {
-            $reader = IOFactory::createReader('Xls');
-            $spreadsheet = $reader->load($filePath);
-            $worksheet = $spreadsheet->getActiveSheet();
-
-            // Extract date range from Row 3 (index 3)
-            $dateRangeCell = $worksheet->getCell('A4')->getValue();
-            $this->extractDateRange($dateRangeCell);
-
-            // Extract dates from Row 4 (index 4) - starting from column D
-            $dates = [];
-            $columnIndex = 4; // Column D (0-indexed: A=1, B=2, C=3, D=4)
+            // Auto-detect the file type instead of hardcoding 'Xls'
+            $reader = IOFactory::createReaderForFile($filePath);
             
-            foreach ($worksheet->getRowIterator(5, 5) as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(false);
-                
-                $colNum = 1;
-                foreach ($cellIterator as $cell) {
-                    if ($colNum >= $columnIndex) {
-                        $value = $cell->getValue();
-                        if (!empty($value) && is_numeric($value)) {
-                            // Construct date from the day number and the date range
-                            if (!empty($this->dateRange['start'])) {
-                                $year = $this->dateRange['start']->year;
-                                $month = $this->dateRange['start']->month;
-                                $dates[$colNum] = Carbon::create($year, $month, (int)$value);
-                            }
-                        }
-                    }
-                    $colNum++;
+            // Set read data only mode for better performance
+            $reader->setReadDataOnly(true);
+            
+            // Suppress PHP warnings during file reading to handle encoding issues gracefully (especially for UTF-16/Code page 1200)
+            set_error_handler(function($errno, $errstr) {
+                // Log encoding warnings but don't stop execution
+                if (strpos($errstr, 'iconv') !== false || strpos($errstr, 'multibyte') !== false) {
+                    Log::warning("Encoding warning during Excel import: $errstr");
+                    return true; // Suppress the warning
+                }
+                return false; // Let other errors through
+            });
+            
+            // Load the spreadsheet with encoding error handling
+            $spreadsheet = $reader->load($filePath);
+            
+            // Restore error handler
+            restore_error_handler();
+            
+            return $this->processSpreadsheet($spreadsheet);
+
+        } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+            // Restore error handler if it was not restored
+            restore_error_handler();
+            
+            // Check if it's an encoding issue
+            if (strpos($e->getMessage(), 'iconv') !== false || strpos($e->getMessage(), 'multibyte') !== false) {
+                // Try alternative approach: convert file encoding first
+                try {
+                    return $this->importWithEncodingFallback($filePath);
+                } catch (\Exception $fallbackException) {
+                    Log::error('Attendance import - All encoding attempts failed: ' . $fallbackException->getMessage());
+                    return [
+                        'success' => false,
+                        'error' => 'Unable to read the Excel file due to encoding issues. Please try re-saving the file as .xlsx format in Excel. Original error: ' . $e->getMessage()
+                    ];
                 }
             }
-
-            // Process employee rows starting from row 7 (index 6)
-            $rowIndex = 7;
-            foreach ($worksheet->getRowIterator(7) as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(false);
-                
-                $cells = [];
-                foreach ($cellIterator as $cell) {
-                    $cells[] = $cell->getValue();
-                }
-
-                // Stop if empty row
-                if (empty($cells[0])) {
-                    break;
-                }
-
-                $employeeId = $cells[0]; // Column A
-                $excelEmployeeName = $cells[1]; // Column B (for reference only)
-                
-                // Find employee in database by employee_id only
-                $employee = Employee::where('employee_id', $employeeId)->first();
-                
-                if (!$employee) {
-                    $this->errors[] = "Employee ID $employeeId (Excel name: $excelEmployeeName) not found in database";
-                    continue;
-                }
-
-                // Process attendance data for each date
-                // Use employee name from database, not from Excel
-                $colNum = 1;
-                foreach ($cells as $cellValue) {
-                    if ($colNum >= 4 && isset($dates[$colNum])) {
-                        $date = $dates[$colNum];
-                        $this->processAttendanceCell($employee, $date, $cellValue);
-                    }
-                    $colNum++;
-                }
-
-                $rowIndex++;
-            }
-
+            
+            Log::error('Attendance import - Spreadsheet reading error: ' . $e->getMessage());
             return [
-                'success' => true,
-                'processed' => $this->processedRecords,
-                'missing' => $this->missingRecords,
-                'errors' => $this->errors,
-                'dateRange' => $this->dateRange
+                'success' => false,
+                'error' => 'Unable to read the Excel file. Please ensure it is a valid Excel file (.xls or .xlsx) and not corrupted. Error: ' . $e->getMessage()
             ];
-
         } catch (\Exception $e) {
+            // Restore error handler if it was not restored
+            restore_error_handler();
+            
             Log::error('Attendance import failed: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
             return [
                 'success' => false,
                 'error' => $e->getMessage()
             ];
         }
+    }
+
+    /**
+     * Fallback method to import with different encoding strategies
+     */
+    protected function importWithEncodingFallback($filePath)
+    {
+        // Try with different reader strategies
+        $readers = [
+            new \PhpOffice\PhpSpreadsheet\Reader\Xls(),
+            new \PhpOffice\PhpSpreadsheet\Reader\Xlsx(),
+        ];
+        
+        foreach ($readers as $reader) {
+            try {
+                $reader->setReadDataOnly(true);
+                
+                // Suppress all warnings and errors during this attempt
+                $spreadsheet = @$reader->load($filePath);
+                
+                // If we got here, it worked! Continue with normal processing
+                return $this->processSpreadsheet($spreadsheet);
+                
+            } catch (\Exception $e) {
+                // Try next reader
+                continue;
+            }
+        }
+        
+        throw new \Exception('Unable to read file with any supported reader');
+    }
+
+    /**
+     * Process spreadsheet data (extracted from main import method for reuse)
+     */
+    protected function processSpreadsheet($spreadsheet)
+    {
+        $worksheet = $spreadsheet->getActiveSheet();
+
+        // Extract date range from Row 3 (index 3)
+        $dateRangeCell = $worksheet->getCell('A4')->getValue();
+        
+        // Handle encoding in date range cell
+        if (is_string($dateRangeCell)) {
+            if (!mb_check_encoding($dateRangeCell, 'UTF-8')) {
+                $dateRangeCell = mb_convert_encoding($dateRangeCell, 'UTF-8', 'UTF-8');
+            }
+            $dateRangeCell = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $dateRangeCell);
+        }
+        
+        $this->extractDateRange($dateRangeCell);
+
+        // Extract dates from Row 4 (index 4) - starting from column D
+        $dates = [];
+        $columnIndex = 4; // Column D (0-indexed: A=1, B=2, C=3, D=4)
+        
+        foreach ($worksheet->getRowIterator(5, 5) as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            
+            $colNum = 1;
+            foreach ($cellIterator as $cell) {
+                if ($colNum >= $columnIndex) {
+                    $value = $cell->getValue();
+                    if (!empty($value) && is_numeric($value)) {
+                        // Construct date from the day number and the date range
+                        if (!empty($this->dateRange['start'])) {
+                            $year = $this->dateRange['start']->year;
+                            $month = $this->dateRange['start']->month;
+                            $dates[$colNum] = Carbon::create($year, $month, (int)$value);
+                        }
+                    }
+                }
+                $colNum++;
+            }
+        }
+
+        // Process employee rows starting from row 7 (index 6)
+        $rowIndex = 7;
+        foreach ($worksheet->getRowIterator(7) as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            
+            $cells = [];
+            foreach ($cellIterator as $cell) {
+                $value = $cell->getValue();
+                
+                // Handle encoding issues in cell values
+                if (is_string($value)) {
+                    if (!mb_check_encoding($value, 'UTF-8')) {
+                        $value = mb_convert_encoding($value, 'UTF-8', 'UTF-8');
+                    }
+                    // Remove any problematic characters
+                    $value = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $value);
+                }
+                
+                $cells[] = $value;
+            }
+
+            // Stop if empty row
+            if (empty($cells[0])) {
+                break;
+            }
+
+            $employeeId = $cells[0]; // Column A
+            $excelEmployeeName = $cells[1] ?? ''; // Column B (for reference only)
+            
+            // Find employee in database by employee_id only
+            $employee = Employee::where('employee_id', $employeeId)->first();
+            
+            if (!$employee) {
+                $this->errors[] = "Employee ID $employeeId (Excel name: $excelEmployeeName) not found in database";
+                continue;
+            }
+
+            // Process attendance data for each date
+            // Use employee name from database, not from Excel
+            $colNum = 1;
+            foreach ($cells as $cellValue) {
+                if ($colNum >= 4 && isset($dates[$colNum])) {
+                    $date = $dates[$colNum];
+                    $this->processAttendanceCell($employee, $date, $cellValue);
+                }
+                $colNum++;
+            }
+
+            $rowIndex++;
+        }
+
+        return [
+            'success' => true,
+            'processed' => $this->processedRecords,
+            'missing' => $this->missingRecords,
+            'errors' => $this->errors,
+            'dateRange' => $this->dateRange
+        ];
     }
 
     protected function extractDateRange($dateRangeString)
@@ -195,6 +300,13 @@ class AttendanceImport
             return $times;
         }
 
+        // Ensure proper UTF-8 encoding and remove problematic characters
+        if (!mb_check_encoding($cellValue, 'UTF-8')) {
+            $cellValue = mb_convert_encoding($cellValue, 'UTF-8', 'UTF-8');
+        }
+        
+        // Clean up the cell value
+        $cellValue = preg_replace('/[\x00-\x1F\x80-\xFF]/', ' ', $cellValue);
         $cellValue = str_replace(["\n", "\r"], ' ', $cellValue);
         
         // Match time patterns like 08:30, 16:45

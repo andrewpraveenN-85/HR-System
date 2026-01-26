@@ -197,6 +197,12 @@
           <span class="iconify" data-icon="mdi:file-excel" style="font-size: 24px;"></span>
           <span>Import Attendance</span>
       </button>
+    @if(session('import_results'))
+    <button id="view-import-results-btn" class="flex items-center justify-center space-x-2 px-6 py-2 text-white bg-[#168AAD] border-2 border-[#168AAD] text-2xl rounded-xl shadow-sm hover:bg-[#1A759F]">
+          <span class="iconify" data-icon="mdi:file-chart" style="font-size: 24px;"></span>
+          <span>View Import Results</span>
+      </button>
+    @endif
     <button id="print-table" class="flex items-center justify-center space-x-2 px-6 py-2 text-[#184E77] border-2 border-[#184E77] text-2xl bg-white rounded-xl shadow-sm hover:from-[#1B5A8A] hover:to-[#60C3A8]">
           <span>Generate Report</span>
       </button>
@@ -438,7 +444,7 @@
 
 <!-- Import Results Modal -->
 @if(session('import_results'))
-<div id="import-results-modal" class="fixed inset-0 bg-black bg-opacity-50 w-full flex justify-center items-center z-50">
+<div id="import-results-modal" class="fixed inset-0 bg-black bg-opacity-50 w-full flex justify-center items-center z-50 {{ session('show_import_modal') ? '' : 'hidden' }}">
   <div class="w-3/4 max-h-[90vh] overflow-y-auto flex flex-col justify-start items-center relative bg-white nunito- p-8 rounded-3xl">
     <button id="close-results-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
       <span class="iconify" data-icon="mdi:close" style="font-size: 24px;"></span>
@@ -451,7 +457,26 @@
       $dateRanges = $results['dateRanges'] ?? [];
       $filesProcessed = $results['filesProcessed'] ?? 0;
       $totalFiles = $results['totalFiles'] ?? 0;
+      $savedFiles = $results['savedFiles'] ?? [];
+      $importedAt = $results['imported_at'] ?? null;
     @endphp
+    
+    @if(!empty($savedFiles))
+    <div class="w-full mb-6 p-4 bg-purple-50 rounded-xl">
+      <p class="text-xl font-semibold text-gray-700 mb-2">
+        <span class="iconify" data-icon="mdi:file-check" style="font-size: 20px;"></span>
+        Saved Files
+        @if($importedAt)
+          <span class="text-sm text-gray-500">(Imported: {{ \Carbon\Carbon::parse($importedAt)->format('Y-m-d H:i:s') }})</span>
+        @endif
+      </p>
+      @foreach($savedFiles as $savedFile)
+      <p class="text-md text-gray-600">
+        <strong>{{ $savedFile['original_name'] }}</strong> - Saved at: {{ $savedFile['uploaded_at'] }}
+      </p>
+      @endforeach
+    </div>
+    @endif
     
     @if(!empty($dateRanges))
     <div class="w-full mb-6 p-4 bg-blue-50 rounded-xl">
@@ -496,17 +521,38 @@
               <th class="border border-gray-300 px-4 py-2 text-left">Clock In</th>
               <th class="border border-gray-300 px-4 py-2 text-left">Clock Out</th>
               <th class="border border-gray-300 px-4 py-2 text-left">Reason</th>
+              <th class="border border-gray-300 px-4 py-2 text-left">Action</th>
             </tr>
           </thead>
           <tbody>
-            @foreach($results['missing'] as $record)
-            <tr class="hover:bg-gray-50">
+            @foreach($results['missing'] as $index => $record)
+            <tr class="hover:bg-gray-50" data-row-index="{{ $index }}">
               <td class="border border-gray-300 px-4 py-2">{{ $record['employee_id'] }}</td>
               <td class="border border-gray-300 px-4 py-2">{{ $record['employee_name'] }}</td>
-              <td class="border border-gray-300 px-4 py-2">{{ $record['date'] }}</td>
-              <td class="border border-gray-300 px-4 py-2">{{ $record['clock_in'] ?? 'N/A' }}</td>
-              <td class="border border-gray-300 px-4 py-2">{{ $record['clock_out'] ?? 'N/A' }}</td>
+              <td class="border border-gray-300 px-4 py-2">
+                {{ \Carbon\Carbon::parse($record['date'])->format('Y-m-d') }} 
+                <span class="text-gray-600">({{ \Carbon\Carbon::parse($record['date'])->format('l') }})</span>
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                <input type="time" 
+                       class="border border-gray-300 rounded px-2 py-1 w-full" 
+                       id="clock_in_{{ $index }}" 
+                       value="{{ isset($record['clock_in']) && $record['clock_in'] != 'N/A' ? substr($record['clock_in'], 0, 5) : '' }}">
+              </td>
+              <td class="border border-gray-300 px-4 py-2">
+                <input type="time" 
+                       class="border border-gray-300 rounded px-2 py-1 w-full" 
+                       id="clock_out_{{ $index }}" 
+                       value="{{ isset($record['clock_out']) && $record['clock_out'] != 'N/A' ? substr($record['clock_out'], 0, 5) : '' }}">
+              </td>
               <td class="border border-gray-300 px-4 py-2 text-yellow-700">{{ $record['reason'] ?? 'Missing data' }}</td>
+              <td class="border border-gray-300 px-4 py-2">
+                <button onclick="updateMissingRecord('{{ $record['employee_id'] }}', '{{ $record['date'] }}', {{ $index }})" 
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                        id="update_btn_{{ $index }}">
+                  Update
+                </button>
+              </td>
             </tr>
             @endforeach
           </tbody>
@@ -560,9 +606,17 @@
     </div>
     @endif
     
-    <button id="close-results-btn" class="px-6 py-2 text-white bg-[#184E77] rounded-xl hover:bg-[#0D3B5C]">
-      Close
-    </button>
+    <div class="flex gap-4">
+      <button id="close-results-btn" class="px-6 py-2 text-white bg-[#184E77] rounded-xl hover:bg-[#0D3B5C]">
+        Close
+      </button>
+      <form action="{{ route('attendance.clearImportResults') }}" method="POST" onsubmit="return confirm('Are you sure you want to clear these import results? This action cannot be undone.');">
+        @csrf
+        <button type="submit" class="px-6 py-2 text-white bg-red-600 rounded-xl hover:bg-red-700">
+          Clear Results
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 @endif
@@ -975,6 +1029,13 @@
   const resultsModal = document.getElementById('import-results-modal');
   const closeResultsModal = document.getElementById('close-results-modal');
   const closeResultsBtn = document.getElementById('close-results-btn');
+  const viewResultsBtn = document.getElementById('view-import-results-btn');
+  
+  if (viewResultsBtn) {
+    viewResultsBtn.addEventListener('click', () => {
+      resultsModal.classList.remove('hidden');
+    });
+  }
   
   if (closeResultsModal) {
     closeResultsModal.addEventListener('click', () => {
@@ -1017,5 +1078,76 @@
           }
       });
   });
+
+  // Update Missing Attendance Record
+  function updateMissingRecord(employeeId, date, index) {
+    const clockIn = document.getElementById(`clock_in_${index}`).value;
+    const clockOut = document.getElementById(`clock_out_${index}`).value;
+    const updateBtn = document.getElementById(`update_btn_${index}`);
+    
+    if (!clockIn && !clockOut) {
+      alert('Please enter at least Clock In or Clock Out time');
+      return;
+    }
+
+    // Disable button and show loading state
+    updateBtn.disabled = true;
+    updateBtn.textContent = 'Updating...';
+    updateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('employee_id', employeeId);
+    formData.append('date', date);
+    if (clockIn) formData.append('clock_in', clockIn);
+    if (clockOut) formData.append('clock_out', clockOut);
+    formData.append('_token', '{{ csrf_token() }}');
+
+    // Send AJAX request
+    fetch('{{ route("attendance.updateMissing") }}', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json'
+      },
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Show success message
+        alert(`Successfully updated attendance for ${data.data.employee_name} on ${data.data.date}`);
+        
+        // Update the button to show success
+        updateBtn.textContent = 'Updated ✓';
+        updateBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+        updateBtn.classList.add('bg-green-500');
+        
+        // Remove the row after a short delay
+        setTimeout(() => {
+          const row = document.querySelector(`tr[data-row-index="${index}"]`);
+          if (row) {
+            row.style.opacity = '0';
+            row.style.transition = 'opacity 0.3s';
+            setTimeout(() => row.remove(), 300);
+          }
+        }, 1000);
+      } else {
+        alert(`Error: ${data.message}`);
+        // Re-enable button
+        updateBtn.disabled = false;
+        updateBtn.textContent = 'Update';
+        updateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to update record. Please try again.');
+      // Re-enable button
+      updateBtn.disabled = false;
+      updateBtn.textContent = 'Update';
+      updateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    });
+  }
   </script>
 @endsection

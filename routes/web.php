@@ -180,6 +180,8 @@ Route::middleware('auth')->prefix('dashboard/attendance')->group(function () {
     Route::post('/store', [AttendanceController::class, 'store'])->name('attendance.store');
     Route::post('/storemanual', [AttendanceController::class, 'storemanual'])->name('attendance.storemanual');
     Route::post('/import', [AttendanceController::class, 'importAttendance'])->name('attendance.import');
+    Route::post('/update-missing', [AttendanceController::class, 'updateMissingRecord'])->name('attendance.updateMissing');
+    Route::post('/clear-import-results', [AttendanceController::class, 'clearImportResults'])->name('attendance.clearImportResults');
     Route::get('/{id}', [AttendanceController::class, 'show'])->name('attendance.details');
     Route::get('/{id}/edit', [AttendanceController::class, 'edit'])->name('attendance.edit');
     Route::put('/{id}', [AttendanceController::class, 'update'])->name('attendance.update');

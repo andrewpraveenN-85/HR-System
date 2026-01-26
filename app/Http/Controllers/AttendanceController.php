@@ -351,11 +351,20 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
             $allErrors = [];
             $dateRanges = [];
             $filesProcessed = 0;
+            $savedFiles = [];
 
             // Process each file
             foreach ($files as $file) {
                 $filePath = $file->getRealPath();
                 $fileName = $file->getClientOriginalName();
+
+                // Save the file to storage
+                $savedPath = $file->store('attendance_imports', 'public');
+                $savedFiles[] = [
+                    'original_name' => $fileName,
+                    'saved_path' => $savedPath,
+                    'uploaded_at' => now()->toDateTimeString()
+                ];
 
                 // Process the import
                 $importer = new AttendanceImport();
@@ -381,15 +390,20 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
                 $filesProcessed++;
             }
 
-            // Store aggregated results in session for display
-            session()->flash('import_results', [
+            // Store aggregated results in session (persist, not flash)
+            session()->put('import_results', [
                 'processed' => $allProcessed,
                 'missing' => $allMissing,
                 'errors' => $allErrors,
                 'dateRanges' => $dateRanges,
                 'filesProcessed' => $filesProcessed,
-                'totalFiles' => count($files)
+                'totalFiles' => count($files),
+                'savedFiles' => $savedFiles,
+                'imported_at' => now()->toDateTimeString()
             ]);
+            
+            // Flag to show the modal on redirect
+            session()->flash('show_import_modal', true);
 
             $message = "Processed {$filesProcessed} of " . count($files) . " file(s). ";
             $message .= count($allProcessed) . ' records processed successfully.';
@@ -453,6 +467,158 @@ private function calculateOvertimeSeconds($clockInDT, $clockOutDT, $date)
         $result['overtime_seconds'] = $this->calculateOvertimeSeconds($clockInDT->copy(), $adjustedClockOut->copy(), $shiftDate);
 
         return $result;
+    }
+
+    public function updateMissingRecord(Request $request)
+    {
+        try {
+            $request->validate([
+                'employee_id' => 'required|exists:employees,employee_id',
+                'date' => 'required|date',
+                'clock_in' => 'nullable|date_format:H:i',
+                'clock_out' => 'nullable|date_format:H:i',
+            ]);
+
+            // Find the employee by employee_id
+            $employee = Employee::where('employee_id', $request->employee_id)->first();
+            
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found'
+                ], 404);
+            }
+
+            $date = $request->date;
+            $clockIn = $request->clock_in ? $request->clock_in . ':00' : null;
+            $clockOut = $request->clock_out ? $request->clock_out . ':00' : null;
+
+            if (!$clockIn && !$clockOut) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please provide at least Clock In or Clock Out time'
+                ], 400);
+            }
+
+            // Check if attendance record already exists
+            $attendance = Attendance::where('employee_id', $employee->id)
+                ->where('date', $date)
+                ->first();
+
+            if ($attendance) {
+                // Update existing record
+                $updates = [];
+                
+                if ($clockIn && !$attendance->clock_in_time) {
+                    $updates['clock_in_time'] = $clockIn;
+                }
+                if ($clockOut && !$attendance->clock_out_time) {
+                    $updates['clock_out_time'] = $clockOut;
+                }
+
+                if (!empty($updates)) {
+                    // Recalculate work hours if both times are now available
+                    $finalClockIn = $updates['clock_in_time'] ?? $attendance->clock_in_time;
+                    $finalClockOut = $updates['clock_out_time'] ?? $attendance->clock_out_time;
+                    
+                    if ($finalClockIn && $finalClockOut) {
+                        $clockInDT = Carbon::parse($date . ' ' . $finalClockIn);
+                        $clockOutDT = Carbon::parse($date . ' ' . $finalClockOut);
+                        
+                        $cutoff = Carbon::parse($date . ' 08:30:00');
+                        $startCount = $clockInDT->lessThan($cutoff) ? $cutoff->copy() : $clockInDT->copy();
+                        
+                        if ($clockOutDT->lessThan($startCount)) {
+                            $clockOutDT->addDay();
+                        }
+
+                        $updates['total_work_hours'] = $startCount->diffInSeconds($clockOutDT);
+                        
+                        // Calculate overtime
+                        $standardEnd = Carbon::parse($date . ' 16:30:00');
+                        if ($clockOutDT->greaterThan($standardEnd)) {
+                            $updates['overtime_seconds'] = $standardEnd->diffInSeconds($clockOutDT);
+                        }
+                        
+                        // Calculate late arrival
+                        $lateThreshold = Carbon::parse($date . ' 08:30:00');
+                        if ($clockInDT->greaterThan($lateThreshold)) {
+                            $updates['late_by_seconds'] = $clockInDT->diffInSeconds($lateThreshold);
+                        }
+                    }
+
+                    $attendance->update($updates);
+                }
+            } else {
+                // Create new record
+                $clockInDT = $clockIn ? Carbon::parse($date . ' ' . $clockIn) : null;
+                $clockOutDT = $clockOut ? Carbon::parse($date . ' ' . $clockOut) : null;
+
+                $lateBySeconds = 0;
+                if ($clockInDT) {
+                    $lateThreshold = Carbon::parse($date . ' 08:30:00');
+                    if ($clockInDT->greaterThan($lateThreshold)) {
+                        $lateBySeconds = $clockInDT->diffInSeconds($lateThreshold);
+                    }
+                }
+
+                $totalWorkSeconds = null;
+                $overtimeSeconds = null;
+                
+                if ($clockInDT && $clockOutDT) {
+                    $cutoff = Carbon::parse($date . ' 08:30:00');
+                    $startCount = $clockInDT->lessThan($cutoff) ? $cutoff->copy() : $clockInDT->copy();
+                    
+                    if ($clockOutDT->lessThan($startCount)) {
+                        $clockOutDT->addDay();
+                    }
+
+                    $totalWorkSeconds = $startCount->diffInSeconds($clockOutDT);
+
+                    $standardEnd = Carbon::parse($date . ' 16:30:00');
+                    if ($clockOutDT->greaterThan($standardEnd)) {
+                        $overtimeSeconds = $standardEnd->diffInSeconds($clockOutDT);
+                    } else {
+                        $overtimeSeconds = 0;
+                    }
+                }
+
+                $attendance = Attendance::create([
+                    'employee_id' => $employee->id,
+                    'date' => $date,
+                    'clock_in_time' => $clockIn,
+                    'clock_out_time' => $clockOut,
+                    'status' => 1,
+                    'total_work_hours' => $totalWorkSeconds,
+                    'overtime_seconds' => $overtimeSeconds,
+                    'late_by_seconds' => $lateBySeconds,
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Attendance record updated successfully',
+                'data' => [
+                    'employee_name' => $employee->full_name,
+                    'date' => $date,
+                    'clock_in' => $attendance->clock_in_time,
+                    'clock_out' => $attendance->clock_out_time,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update missing attendance record: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update record: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function clearImportResults()
+    {
+        session()->forget('import_results');
+        return redirect()->route('attendance.management')->with('success', 'Import results cleared successfully');
     }
 
 }
